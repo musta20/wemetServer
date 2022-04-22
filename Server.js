@@ -61,7 +61,7 @@ const mediaCodecs = [
 
 app.use(parser.urlencoded({ extended: false }))
 app.use(parser.json())
-app.get("/", express.static(path.join(__dirname, 'public')))
+app.get("/", express.static(path.join(__dirname, 'build')))
 
 
 const TheRoomHelper = new RoomHelper(io);
