@@ -298,7 +298,7 @@ io.on("connection", function (socket) {
 
   //this check if the room Exist
   socket.on("IsRommeExist", (room, fun) => {
-
+console.log('IsRommeExist')
     if (!TheRoomHelper.IsRommeExist(TheRoomHelper.GetRoomName(room), socket)) {
 
       fun({ status: true, room: room })
@@ -875,10 +875,14 @@ app.get('/imges/:name', function (req, res) {
   }
   catch(err){
     console.error(err)
-
     }
-
 })
+
+app.use(express.static(path.join(__dirname, 'build')));
+
+app.get('/', function (req, res) {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
 
 http.listen(port,  ()=> {
   console.log(`SERVER RUNING AT PORT ${port}`)
