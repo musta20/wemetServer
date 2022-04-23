@@ -64,8 +64,8 @@ app.use(parser.json())
 app.get("/", express.static(path.join(__dirname, 'build')))
 
 const options = {
-  key: fs.readFileSync('pri.pem', 'utf-8'),
-  cert: fs.readFileSync('cert.pem', 'utf-8')
+  key: fs.readFileSync('../pri.pem', 'utf-8'),
+  cert: fs.readFileSync('../cert.pem', 'utf-8')
 }
 
 
