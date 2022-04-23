@@ -3,7 +3,6 @@ var Ajv = require('ajv');
 var RoomHelper = require('./RoomHelper').RoomHelper;
 var ajv = new Ajv();
 var app = express();
-var http = require("http").Server(app);
 var iO = require("socket.io");
 const fs = require('fs');
 var parser = require('body-parser')
@@ -61,7 +60,6 @@ const mediaCodecs = [
 
 app.use(parser.urlencoded({ extended: false }))
 app.use(parser.json())
-app.get("/", express.static(path.join(__dirname, 'build')))
 
 const options = {
   key: fs.readFileSync('../pri.pem', 'utf-8'),
@@ -206,7 +204,7 @@ io.on("connection", function (socket) {
           listenIps: [
             {
               ip: '0.0.0.0', // replace with relevant IP address
-              announcedIp: '127.0.0.1',
+              announcedIp: '206.189.30.28',
             }
           ],
           enableUdp: true,
@@ -885,6 +883,8 @@ app.get('/imges/:name', function (req, res) {
     console.error(err)
     }
 })
+
+
 
 app.use(express.static(path.join(__dirname, 'build')));
 
