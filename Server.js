@@ -4,13 +4,13 @@ var RoomHelper = require('./RoomHelper').RoomHelper;
 var ajv = new Ajv();
 var app = express();
 var http = require("http").Server(app);
-var io = require("socket.io")(http);
+var iO = require("socket.io");
 const fs = require('fs');
 var parser = require('body-parser')
 const path = require('path')
 const port = 6800;
 var mediasoup = require('mediasoup')
-
+var https = require('httpolyglot');
 
 let worker
 let rooms = {}          // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
@@ -63,6 +63,14 @@ app.use(parser.urlencoded({ extended: false }))
 app.use(parser.json())
 app.get("/", express.static(path.join(__dirname, 'build')))
 
+const options = {
+  key: fs.readFileSync('pri.pem', 'utf-8'),
+  cert: fs.readFileSync('cert.pem', 'utf-8')
+}
+
+
+const httpsServer = https.createServer(options, app)
+var io = iO(httpsServer);
 
 const TheRoomHelper = new RoomHelper(io);
 
@@ -884,6 +892,6 @@ app.get('/', function (req, res) {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
-http.listen(port,  ()=> {
+httpsServer.listen(port,  ()=> {
   console.log(`SERVER RUNING AT PORT ${port}`)
 });
