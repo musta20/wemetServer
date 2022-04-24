@@ -93,13 +93,13 @@ class RoomHelper {
     return c.title
 
   }
-
+ 
   //this function extract the room info 
   GetTheFullRoomName(name) {
-
     var myo = this.io.sockets.adapter.rooms
     var rn = null;
     Object.getOwnPropertyNames(myo).forEach(function (index) {
+      console.log(index)
       try {
         var c = JSON.parse(index)
 
@@ -107,7 +107,10 @@ class RoomHelper {
       } catch (e) {
         return null;
       }
+      console.log('GetTheFullRoomName GetTheFullRoomName')
 
+      console.log(name)
+      console.log(c)
       if (c.title == name) {
         rn = c;
 

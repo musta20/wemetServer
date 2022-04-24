@@ -19,7 +19,7 @@
     "mysql": "^2.18.1",
     "nodemon": "^2.0.15",
     "object-hash": "^2.0.3",
-    "socket.io": "^4.4.1"
+    "socket.io": "^2.4.0"
   },
   "browserslist": {
     "production": [

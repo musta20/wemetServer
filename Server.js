@@ -3,14 +3,16 @@ var Ajv = require('ajv');
 var RoomHelper = require('./RoomHelper').RoomHelper;
 var ajv = new Ajv();
 var app = express();
+//var http = require("http").Server(app);
 var iO = require("socket.io");
 const fs = require('fs');
 var parser = require('body-parser')
 const path = require('path')
 const port = 6800;
 var mediasoup = require('mediasoup')
+var io = require("socket.io")(http);
 var https = require('httpolyglot');
-
+var http = require("http").Server(app);
 let worker
 let rooms = {}          // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
 let peers = {}          // { socketId1: { roomName1, socket, transports = [id1, id2,] }, producers = [id1, id2,] }, consumers = [id1, id2,], peerDetails }, ...}
@@ -60,11 +62,16 @@ const mediaCodecs = [
 
 app.use(parser.urlencoded({ extended: false }))
 app.use(parser.json())
+app.get("/", express.static(path.join(__dirname, 'build')))
+
+
 
 const options = {
   key: fs.readFileSync('../pri.pem', 'utf-8'),
   cert: fs.readFileSync('../cert.pem', 'utf-8')
 }
+
+
 
 
 const httpsServer = https.createServer(options, app)
@@ -409,7 +416,9 @@ console.log('IsRommeExist')
       socket.join(FullRomeName);
       socket.to("mainrrom").emit('AddRoom', { roomName })
 
-
+     // console.log(roomName)
+     // console.log(FullRomeName)
+     // console.log(io.sockets.adapter.rooms)
       fun({ status: true, room: roomName, First: true, UserId: socket.id, rtpCapabilities: rtpCapabilities })
       return
     }
@@ -822,12 +831,12 @@ console.log('IsRommeExist')
     const { roomName } = peers[socket.id]
 
     addProducer(producer, roomName)
-
+console.log(roomName)
     let TraficRoom = TheRoomHelper.GetTheFullRoomName(roomName)
     //  console.log("here is roomName")
     //  console.log(roomName)
-    //  console.log("here is TraficRoom")
-    //  console.log(TraficRoom)
+      console.log("here is TraficRoom")
+      console.log(TraficRoom)
     let router1 = rooms[roomName].router
     if (rooms[TraficRoom.TraficRoom]) {
       let router2 = rooms[TraficRoom.TraficRoom].router
@@ -883,8 +892,6 @@ app.get('/imges/:name', function (req, res) {
     console.error(err)
     }
 })
-
-
 
 app.use(express.static(path.join(__dirname, 'build')));
 
