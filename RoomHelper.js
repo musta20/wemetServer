@@ -1,10 +1,10 @@
 class RoomHelper {
 
-  constructor(io) {
+  constructor(socket) {
     this.GetRoomsNames = this.GetRoomsNames.bind(this)
     this.IsPublic = this.IsPublic.bind(this)
     this.GetTheStringFullRoomName = this.GetTheStringFullRoomName.bind(this)
-    this.io = io;
+    this.socket = socket;
   }
   //this function create a name for the viewr 
   GenerateRoomeTrafic(id) {
@@ -29,24 +29,24 @@ class RoomHelper {
     let peerslist = Object.values(peers)
 
     var admin = peerslist.find(peer => peer.peerDetails.isAdmin == true && peer.roomName == room.title)
-    return admin.peerDetails.IsPublic
+    console.log("CHECKING THE ADMIN")
+    console.log(admin)
+    return admin ? admin.peerDetails.IsPublic : false
   }
 
   //this function will return thr current live rooms names
   GetRoomsNames(peers) {
-    var myo = this.io.sockets.adapter.rooms
-    //console.log(myo)
+                      //socket.rooms
+    console.log(peers)
+    var myo =  this.socket.rooms
+    console.log(myo)
     var obj = [];
-    Object.getOwnPropertyNames(myo).forEach(function (index) {
-      try {
-        var c = JSON.parse(index)
-
-      } catch (e) {
-        return [];
-      }
-      let ispublic = this.IsPublic(c, peers)
-      if (c != null && ispublic) {
-        obj.push(c.title)
+    myo.forEach(function (index) {
+      console.log(index)
+    
+      let ispublic = this.IsPublic(index, peers)
+      if (index != null && ispublic) {
+        obj.push(index)
       }
     }.bind(this))
     return obj;
@@ -96,7 +96,7 @@ class RoomHelper {
  
   //this function extract the room info 
   GetTheFullRoomName(name) {
-    var myo = this.io.sockets.adapter.rooms
+    var myo = this.socket.rooms
     var rn = null;
     Object.getOwnPropertyNames(myo).forEach(function (index) {
       console.log(index)
@@ -144,7 +144,7 @@ class RoomHelper {
 
   //chekc if the room exist
   IsRommeExist(room, socket) {
-    var myo = this.io.sockets.adapter.rooms
+    var myo = this.socket.rooms
     var obj = [];
     Object.getOwnPropertyNames(myo).forEach(function (index) {
       try {
@@ -163,7 +163,7 @@ class RoomHelper {
   //chekc if room is fully acoupy
   IsRoomFull(room) {
     try {
-      if (this.io.sockets.adapter.rooms[room].length >= 5) {
+      if (this.socket.rooms[room].length >= 5) {
         return true;
       }
     } catch (e) {
@@ -175,26 +175,32 @@ class RoomHelper {
 
   //get the room name iam i
   GetRoomsIamIn(socket) {
-    var c = [];
+/*     var c = [];
     Object.getOwnPropertyNames(socket.rooms).forEach(e => {
       if (this.GetRoomName(e) != null) {
         c.push(this.GetRoomName(e))
       }
 
     })
-    return c;
+     */
+    const roomStr = [...socket.rooms][1];
+
+    const obj = JSON.parse(roomStr);
+
+   return obj.title
+     
   }
 
   //quit all room iam connected to
   LeavAllRooms(socket) {
-    var AllRome = this.GetRoomsIamIn(socket);
-    if (AllRome != null) {
-      AllRome.forEach(rome => {
+   // var AllRome = this.GetRoomsIamIn(socket);
+ //  if (AllRome != null) {
+    //  AllRome.forEach(rome => {
 
-        socket.leave('{"title":"' + rome + '"}')
+     //   socket.leave('{"title":"' + rome + '"}')
 
-      })
-    }
+    //  })
+  //  }
     return true;
 
   }

@@ -3,16 +3,26 @@ var Ajv = require('ajv');
 var RoomHelper = require('./RoomHelper').RoomHelper;
 var ajv = new Ajv();
 var app = express();
-//var http = require("http").Server(app);
-var iO = require("socket.io");
+var http = require("http").Server(app);
+//var iO = require("socket.io");
 const fs = require('fs');
 var parser = require('body-parser')
 const path = require('path')
 const port = 6800;
 var mediasoup = require('mediasoup')
-var io = require("socket.io")(http);
-var https = require('httpolyglot');
-var http = require("http").Server(app);
+//var io = require("socket.io")(http,{  origins: ["http://localhost:3000"]
+//});
+
+var io = require("socket.io")(http, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+//var https = require('httpolyglot');
+//var http = require("http").Server(app);
 let worker
 let rooms = {}          // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
 let peers = {}          // { socketId1: { roomName1, socket, transports = [id1, id2,] }, producers = [id1, id2,] }, consumers = [id1, id2,], peerDetails }, ...}
@@ -67,17 +77,17 @@ app.get("/", express.static(path.join(__dirname, 'build')))
 
 
 const options = {
-  key: fs.readFileSync('../pri.pem', 'utf-8'),
-  cert: fs.readFileSync('../cert.pem', 'utf-8')
+  key: fs.readFileSync('ssl/key.pem', 'utf-8'),
+  cert: fs.readFileSync('ssl/cert.pem', 'utf-8')
 }
 
 
+let TheRoomHelper ;
 
 
-const httpsServer = https.createServer(options, app)
-var io = iO(httpsServer);
+//const httpsServer = https.createServer(options, app)
+//var io = iO(http);
 
-const TheRoomHelper = new RoomHelper(io);
 
 //const {GetTheStringFullRoomName} = TheRoomHelper.GetTheStringFullRoomName
 
@@ -116,7 +126,7 @@ worker = createWorker()
 //set the event handler on client connection 
 io.on("connection", function (socket) {
 
-
+  TheRoomHelper= new RoomHelper(socket);
   //the schema used to valdait the input
   const schema = {
     "properties":
@@ -211,7 +221,7 @@ io.on("connection", function (socket) {
           listenIps: [
             {
               ip: '0.0.0.0', // replace with relevant IP address
-              announcedIp: '206.189.30.28',
+              announcedIp: '127.0.0.1',
             }
           ],
           enableUdp: true,
@@ -371,7 +381,8 @@ console.log('IsRommeExist')
   5-if the room is locked it will not allow user to join and the user becam just viewr
   */
   socket.on("CreateStream", async (room, fun) => {
-
+  console.log("CREATE STARTING STREAM ")
+  console.log(room)
     var roomName = TheRoomHelper.GetRoomName(room);
     var valid = ajv.validate(schema, { "name": roomName });
 
@@ -542,10 +553,10 @@ console.log('IsRommeExist')
 
   //this event save the imge sent by the user as thumnal for live room
   socket.on("saveimg", (img, fun) => {
-
     var base64Data = img.replace(/^data:image\/png;base64,/, "");
 
-    var imgname = TheRoomHelper.GetRoomsIamIn(socket)[0] + '.png';
+    var imgname = TheRoomHelper.GetRoomsIamIn(socket) + '.png';
+    console.log('SAVING IMGE '+imgname)
 
     fs.writeFile('uploads/' + imgname, base64Data, 'base64', err => {
       if (err) throw err;
@@ -899,6 +910,6 @@ app.get('/', function (req, res) {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
-httpsServer.listen(port,  ()=> {
+http.listen(port,  ()=> {
   console.log(`SERVER RUNING AT PORT ${port}`)
 });
