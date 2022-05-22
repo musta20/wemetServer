@@ -29,15 +29,15 @@ class RoomHelper {
     let peerslist = Object.values(peers)
 
     var admin = peerslist.find(peer => peer.peerDetails.isAdmin == true && peer.roomName == room.title)
-    console.log("CHECKING THE ADMIN")
-    console.log(admin)
+  
+    
     return admin ? admin.peerDetails.IsPublic : false
   }
 
   //this function will return thr current live rooms names
   GetRoomsNames(peers) {
                       //socket.rooms
-    console.log(peers)
+    console.log("THE ALL PEERS ")
     var myo =  this.socket.rooms
     console.log(myo)
     var obj = [];
@@ -185,6 +185,9 @@ class RoomHelper {
      */
     const roomStr = [...socket.rooms][1];
 
+    console.log('DISPLAYING THE ROOM STR')
+    console.log(roomStr)
+    if (roomStr === 'mainrrom') return roomStr
     const obj = JSON.parse(roomStr);
 
    return obj.title
@@ -193,7 +196,14 @@ class RoomHelper {
 
   //quit all room iam connected to
   LeavAllRooms(socket) {
-   // var AllRome = this.GetRoomsIamIn(socket);
+    let AllRome = this.GetRoomsIamIn(socket);
+    if (AllRome === 'mainrrom')
+    { 
+      socket.leave(AllRome) 
+     return true;
+    }
+       const theroom = this.GetTheStringFullRoomName(AllRome)
+      if(theroom) socket.leave(theroom)
  //  if (AllRome != null) {
     //  AllRome.forEach(rome => {
 

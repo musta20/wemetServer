@@ -1,19 +1,19 @@
-var express = require("express");
-var Ajv = require('ajv');
-var RoomHelper = require('./RoomHelper').RoomHelper;
-var ajv = new Ajv();
-var app = express();
-var http = require("http").Server(app);
+let express = require("express");
+let Ajv = require('ajv');
+const { RoomHelper } = require('./RoomHelper');
+let ajv = new Ajv();
+let app = express();
+let http = require("http").Server(app);
 //var iO = require("socket.io");
 const fs = require('fs');
-var parser = require('body-parser')
+let parser = require('body-parser')
 const path = require('path')
 const port = 6800;
-var mediasoup = require('mediasoup')
+let mediasoup = require('mediasoup')
 //var io = require("socket.io")(http,{  origins: ["http://localhost:3000"]
 //});
 
-var io = require("socket.io")(http, {
+let io = require("socket.io")(http, {
   cors: {
     origin: "http://localhost:3000",
     methods: ["GET", "POST"],
