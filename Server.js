@@ -124,7 +124,7 @@ const createRoom = async (roomName, socketId) => {
 worker = createWorker()
 
 //set the event handler on client connection 
-io.on("connection", function (socket) {
+io.on("connection",  socket =>{
 
   TheRoomHelper= new RoomHelper(socket);
   //the schema used to valdait the input
@@ -424,6 +424,8 @@ console.log('IsRommeExist')
       }
 
       const rtpCapabilities = router1.rtpCapabilities
+      console.log('JOINGING THE ROOM ')
+      console.log(FullRomeName)
       socket.join(FullRomeName);
       socket.to("mainrrom").emit('AddRoom', { roomName })
 
@@ -453,6 +455,7 @@ console.log('IsRommeExist')
         '","BossId":"' + FullRomeName.BossId +
         '","TraficRoom":"' + FullRomeName.TraficRoom + '"}'
 
+  
 
       socket.join(FullRomeName);
 

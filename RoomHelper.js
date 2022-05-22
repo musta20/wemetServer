@@ -8,13 +8,13 @@ class RoomHelper {
   }
   //this function create a name for the viewr 
   GenerateRoomeTrafic(id) {
-    var rom = Math.floor(Math.random() * 1000000);
+    let rom = Math.floor(Math.random() * 1000000);
     return rom + "@" + id;
   }
 
   //get the user id
   GenerateUserId(username) {
-    // var username =  Math.floor(Math.random() * 1000000);
+    // let username =  Math.floor(Math.random() * 1000000);
 
 
     return username;
@@ -23,12 +23,11 @@ class RoomHelper {
 
   //this function will check if the room is public or not
   IsPublic(room, peers) {
-    //console.log(peers)
-    //console.log("GetTheStringFullRoomName  GetTheStringFullRoomName  GetTheStringFullRoomName")
-    //console.log(room)
+    //
+   // console.log("CHEHKING IF THIS ROOM IS SET TO PUBLIC")
     let peerslist = Object.values(peers)
 
-    var admin = peerslist.find(peer => peer.peerDetails.isAdmin == true && peer.roomName == room.title)
+    let admin = peerslist.find(peer => peer.peerDetails.isAdmin == true && peer.roomName == room.title)
   
     
     return admin ? admin.peerDetails.IsPublic : false
@@ -38,17 +37,17 @@ class RoomHelper {
   GetRoomsNames(peers) {
                       //socket.rooms
     console.log("THE ALL PEERS ")
-    var myo =  this.socket.rooms
+    let myo =  this.socket.rooms
     console.log(myo)
-    var obj = [];
-    myo.forEach(function (index) {
+    let obj = [];
+    myo.forEach((index) =>{
       console.log(index)
     
       let ispublic = this.IsPublic(index, peers)
       if (index != null && ispublic) {
         obj.push(index)
       }
-    }.bind(this))
+    })
     return obj;
 
   }
@@ -57,7 +56,7 @@ class RoomHelper {
   IsViewer(obj) {
 
     try {
-      var c = JSON.parse(obj)
+      let c = JSON.parse(obj)
 
     } catch (e) {
 
@@ -69,9 +68,9 @@ class RoomHelper {
 
   //is the user set the room as public
   GetIsPublic(obj) {
-
+    let c ;
     try {
-      var c = JSON.parse(obj)
+       c = JSON.parse(obj)
 
     } catch (e) {
 
@@ -83,8 +82,9 @@ class RoomHelper {
 
   //get this room name
   GetRoomName(obj) {
+    let c;
     try {
-      var c = JSON.parse(obj)
+       c = JSON.parse(obj)
 
     } catch (e) {
       //console.log('not object')
@@ -96,12 +96,12 @@ class RoomHelper {
  
   //this function extract the room info 
   GetTheFullRoomName(name) {
-    var myo = this.socket.rooms
-    var rn = null;
+    let myo = this.socket.rooms
+    let rn = null;
     Object.getOwnPropertyNames(myo).forEach(function (index) {
       console.log(index)
       try {
-        var c = JSON.parse(index)
+        let c = JSON.parse(index)
 
 
       } catch (e) {
@@ -134,7 +134,7 @@ class RoomHelper {
 
   //get the room admin id
   GetRoomBossId(room, rooms, peers) {
-    var users = rooms[room].peers
+    let users = rooms[room].peers
 
     let admin = users.find(peer => peers[peer].peerDetails.isAdmin == true)
 
@@ -144,11 +144,11 @@ class RoomHelper {
 
   //chekc if the room exist
   IsRommeExist(room, socket) {
-    var myo = this.socket.rooms
-    var obj = [];
+    let myo = this.socket.rooms
+    let obj = [];
     Object.getOwnPropertyNames(myo).forEach(function (index) {
       try {
-        var c = JSON.parse(index)
+        let c = JSON.parse(index)
 
       } catch (e) {
         return [];
@@ -175,7 +175,7 @@ class RoomHelper {
 
   //get the room name iam i
   GetRoomsIamIn(socket) {
-/*     var c = [];
+/*     let c = [];
     Object.getOwnPropertyNames(socket.rooms).forEach(e => {
       if (this.GetRoomName(e) != null) {
         c.push(this.GetRoomName(e))
