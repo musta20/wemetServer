@@ -13,7 +13,7 @@ let mediasoup = require('mediasoup')
 //var io = require("socket.io")(http,{  origins: ["http://localhost:3000"]
 //});
 
-let io = require("socket.io")(http, {
+var io = require("socket.io")(http, {
   cors: {
     origin: "http://localhost:3000",
     methods: ["GET", "POST"],
@@ -381,8 +381,8 @@ console.log('IsRommeExist')
   5-if the room is locked it will not allow user to join and the user becam just viewr
   */
   socket.on("CreateStream", async (room, fun) => {
-  console.log("CREATE STARTING STREAM ")
-  console.log(room)
+  //console.log("CREATE STARTING STREAM ")
+  //console.log(room)
     var roomName = TheRoomHelper.GetRoomName(room);
     var valid = ajv.validate(schema, { "name": roomName });
 
@@ -424,8 +424,8 @@ console.log('IsRommeExist')
       }
 
       const rtpCapabilities = router1.rtpCapabilities
-      console.log('JOINGING THE ROOM ')
-      console.log(FullRomeName)
+      //console.log('JOINGING THE ROOM ')
+      //console.log(FullRomeName)
       socket.join(FullRomeName);
       socket.to("mainrrom").emit('AddRoom', { roomName })
 
@@ -570,8 +570,13 @@ console.log('IsRommeExist')
   //the event display current live room and add or remove at real time
   socket.on("getroom", (room, fun) => {
 
+    let rroommss = TheRoomHelper.GetRoomsNames(peers);
+    console.log('SHOWING THE ROOMS IN LIST:');
+    console.log(rroommss)
+
     socket.join("mainrrom")
-    fun(TheRoomHelper.GetRoomsNames(peers))
+    
+    fun(rroommss)
 
 
   });
