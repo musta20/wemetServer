@@ -1,5 +1,7 @@
 let express = require("express");
 let Ajv = require('ajv');
+require('dotenv').config()
+
 const { RoomHelper } = require('./RoomHelper');
 let ajv = new Ajv();
 let app = express();
@@ -8,7 +10,7 @@ let http = require("http").Server(app);
 const fs = require('fs');
 let parser = require('body-parser')
 const path = require('path')
-const port = 6800;
+const PORT = process.env.PORT;
 let mediasoup = require('mediasoup')
 //var io = require("socket.io")(http,{  origins: ["http://localhost:3000"]
 //});
@@ -36,7 +38,9 @@ mediasoup use mediasoup to create worker
 */
 const createWorker = async () => {
   worker = await mediasoup.createWorker()
-  console.log(`worker pid ${worker.pid}`)
+
+  console.log('\x1b[33m%s\x1b[0m',`WORKER START PID:${worker.pid}`);
+
 
   worker.on('died', error => {
     // This implies something serious happened, so kill the application
@@ -918,6 +922,10 @@ app.get('/', function (req, res) {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
-http.listen(port,  ()=> {
-  console.log(`SERVER RUNING AT PORT ${port}`)
-});
+
+
+
+http.listen(PORT,()=>{
+  console.log('\x1b[33m%s\x1b[0m',`NODEJS SERVER RUNNING ON PORT:${PORT}`);
+
+})
