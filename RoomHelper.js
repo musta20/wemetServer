@@ -4,6 +4,7 @@ class RoomHelper {
     this.IsPublic = this.IsPublic.bind(this);
     this.GetTheStringFullRoomName = this.GetTheStringFullRoomName.bind(this);
     this.socket = socket;
+    this.isJsonString = this.isJsonString.bind(this);
   }
   //this function create a name for the viewr
   GenerateRoomeTrafic(id) {
@@ -21,16 +22,12 @@ class RoomHelper {
   //this function will check if the room is public or not
   IsPublic(room, peers) {
     let peerslist = Object.values(peers);
-    let Theroom={title:""} ;
+    let Theroom = { title: "" };
     try {
-       Theroom = JSON.parse(room);
+      Theroom = JSON.parse(room);
     } catch (e) {
       return null;
     }
-    
-
-
-
 
     let admin = peerslist.find(
       (peer) =>
@@ -51,12 +48,9 @@ class RoomHelper {
     //  console.log(myo)
     let obj = [];
     myo.forEach((element, index) => {
-      console.log(index);
-
       let ispublic = this.IsPublic(index, peers);
 
       if (index != null && ispublic) {
-        
         obj.push(JSON.parse(index).title);
       }
     });
@@ -146,20 +140,38 @@ class RoomHelper {
     return peers[admin];
   }
 
+  isJsonString(str) {
+    console.log(str)
+    try {
+      JSON.parse(str);
+    } catch (e) {
+      console.log('\x1b[33m%s\x1b[0m',`THIS IS FALSE `);
+
+      return false;
+    }
+    console.log('\x1b[33m%s\x1b[0m',`THIS IS TRUE`);
+
+    return true;
+  }
+
   //chekc if the room exist
   IsRommeExist(room, socket) {
-    let myo = this.socket.rooms;
+    let myo = this.socket.adapter.rooms;
+
     let obj = [];
-    Object.getOwnPropertyNames(myo).forEach(function (index) {
-      try {
-        let c = JSON.parse(index);
-      } catch (e) {
-        return [];
+
+    myo.forEach( (element, index) =>{
+
+      if (this.isJsonString(index)) {
+        console.log(`IS THE ROOM : ${index} EXIST IN THE ACTIVE ROOMS IN THE NEXT LIST:`);
+
+        obj.push(JSON.parse(index).title);
       }
 
-      obj.push(c.title);
     });
 
+  //  console.log(`IS THE ROOM : ${room} EXIST IN THE ACTIVE ROOMS IN THE NEXT LIST:`);
+   // console.log(obj)
     return obj.includes(room);
   }
 

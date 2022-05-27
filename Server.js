@@ -11,7 +11,7 @@ const fs = require('fs');
 let parser = require('body-parser')
 const path = require('path')
 const PORT = process.env.PORT;
-let mediasoup = require('mediasoup')
+let mediasoup = require('mediasoup');
 //var io = require("socket.io")(http,{  origins: ["http://localhost:3000"]
 //});
 
@@ -39,7 +39,7 @@ mediasoup use mediasoup to create worker
 const createWorker = async () => {
   worker = await mediasoup.createWorker()
 
-  console.log('\x1b[33m%s\x1b[0m',`WORKER START PID:${worker.pid}`);
+  console.log('\x1b[36m%s\x1b[0m',`WORKER START PID:${worker.pid}`);
 
 
   worker.on('died', error => {
@@ -441,7 +441,7 @@ console.log('IsRommeExist')
     }
 
     if (TheRoomHelper.IsRommeExist(roomName, socket) &&
-      !TheRoomHelper.IsViewer(room) &&
+      !TheRoomHelper.IsPublic(room,peers) &&
       !TheRoomHelper.IsRoomFull(TheRoomHelper.GetTheStringFullRoomName(roomName))) {
       UserId = TheRoomHelper.GenerateUserId(socket.id);
       FullRomeName = TheRoomHelper.GetTheFullRoomName(roomName)
@@ -494,7 +494,7 @@ console.log('IsRommeExist')
 
 
     UserId = TheRoomHelper.GenerateUserId(socket.id);
-    FullRomeName = TheRoomHelper.GetTheFullRoomName(TheRoomHelper.GetRoomName(room))
+    FullRomeName = TheRoomHelper.GetTheFullRoomName(room)
     let peerslist = Object.values(peers)
     try {
       let admin = peerslist.find(peer => peer.peerDetails.isAdmin === true)
@@ -505,6 +505,9 @@ console.log('IsRommeExist')
     } catch (e) {
       console.error(e)
     }
+console.log(`THE FULL ROOM NAME `);
+
+console.log(room)
 
 
     TraficRoom = FullRomeName.TraficRoom;
