@@ -5,6 +5,9 @@ class RoomHelper {
     this.GetTheStringFullRoomName = this.GetTheStringFullRoomName.bind(this);
     this.socket = socket;
     this.isJsonString = this.isJsonString.bind(this);
+    this.GetAllUsersInRoom = this.GetAllUsersInRoom.bind(this);
+
+    
   }
   //this function create a name for the viewr
   GenerateRoomeTrafic(id) {
@@ -40,12 +43,12 @@ class RoomHelper {
   //this function will return thr current live rooms names
   GetRoomsNames(peers) {
     //socket.rooms
-    //  console.log("THE ALL PEERS ")
+    //  //console.log("THE ALL PEERS ")
     let myo = this.socket.adapter.rooms;
 
-    // console.log("GET THE ROOMS NAMES :");
+    // //console.log("GET THE ROOMS NAMES :");
 
-    //  console.log(myo)
+    //  //console.log(myo)
     let obj = [];
     myo.forEach((element, index) => {
       let ispublic = this.IsPublic(index, peers);
@@ -54,14 +57,33 @@ class RoomHelper {
         obj.push(JSON.parse(index).title);
       }
     });
-    // console.log(obj);
+    // //console.log(obj);
     return obj;
   }
 
+    //this function will return thr current live rooms names
+    GetAllUsersInRoom(room) {
+      let RoomList = this.socket.adapter.rooms;
+  
+      let userList;
+    
+      RoomList.forEach((element, index) => {
+        if(index ===room) {
+
+          userList = element
+        } 
+        
+  
+      });
+      // //console.log(obj);
+     return userList;
+    }
+
   //is the user viwer or gone join the room
   IsViewer(obj) {
+    let c
     try {
-      let c = JSON.parse(obj);
+       c = JSON.parse(obj);
     } catch (e) {
       return null;
     }
@@ -85,7 +107,7 @@ class RoomHelper {
     try {
       c = JSON.parse(obj);
     } catch (e) {
-      //console.log('not object')
+      ////console.log('not object')
       return null;
     }
     return c.title;
@@ -94,23 +116,20 @@ class RoomHelper {
   //this function extract the room info
   GetTheFullRoomName(name) {
     let myo = this.socket.adapter.rooms;
-    let rn = null;
-    myo.forEach(function (index) {
-      try {
+    let fullRoomName ;
+    myo.forEach( (element,index) => {
+     
+      if(!this.isJsonString(index)) return;
+     
         let c = JSON.parse(index);
-      } catch (e) {
-        return null;
-      }
-      console.log("GetTheFullRoomName GetTheFullRoomName");
-
-      console.log(name);
-      console.log(c);
+      
+  
       if (c.title == name) {
-        rn = c;
+        fullRoomName = c;
       }
     });
 
-    return rn;
+    return fullRoomName;
   }
 
   //this function extract the room info and build the room name
@@ -141,15 +160,13 @@ class RoomHelper {
   }
 
   isJsonString(str) {
-    console.log(str)
+    //console.log(str)
     try {
       JSON.parse(str);
     } catch (e) {
-      console.log('\x1b[33m%s\x1b[0m',`THIS IS FALSE `);
 
       return false;
     }
-    console.log('\x1b[33m%s\x1b[0m',`THIS IS TRUE`);
 
     return true;
   }
@@ -163,15 +180,15 @@ class RoomHelper {
     myo.forEach( (element, index) =>{
 
       if (this.isJsonString(index)) {
-        console.log(`IS THE ROOM : ${index} EXIST IN THE ACTIVE ROOMS IN THE NEXT LIST:`);
+        //console.log(`IS THE ROOM : ${index} EXIST IN THE ACTIVE ROOMS IN THE NEXT LIST:`);
 
         obj.push(JSON.parse(index).title);
       }
 
     });
 
-  //  console.log(`IS THE ROOM : ${room} EXIST IN THE ACTIVE ROOMS IN THE NEXT LIST:`);
-   // console.log(obj)
+  //  //console.log(`IS THE ROOM : ${room} EXIST IN THE ACTIVE ROOMS IN THE NEXT LIST:`);
+   // //console.log(obj)
     return obj.includes(room);
   }
 
@@ -198,9 +215,10 @@ class RoomHelper {
      */
     const roomStr = [...socket.rooms][1];
 
-    //console.log("DISPLAYING THE ROOM STR");
-    //console.log(roomStr);
+    ////console.log("DISPLAYING THE ROOM STR");
+    console.log(roomStr);
     if (roomStr === "mainrrom") return roomStr;
+    if(!this.isJsonString(roomStr)) return "";
     const obj = JSON.parse(roomStr);
 
     return obj.title;
@@ -209,6 +227,7 @@ class RoomHelper {
   //quit all room iam connected to
   LeavAllRooms(socket) {
     let AllRome = this.GetRoomsIamIn(socket);
+    if(!AllRome) return true;
     if (AllRome === "mainrrom") {
       socket.leave(AllRome);
       return true;

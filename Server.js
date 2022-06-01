@@ -1,17 +1,18 @@
 let express = require("express");
-let Ajv = require('ajv');
-require('dotenv').config()
+let Ajv = require("ajv");
+require("dotenv").config();
 
-const { RoomHelper } = require('./RoomHelper');
+const { RoomHelper } = require("./RoomHelper");
 let ajv = new Ajv();
 let app = express();
 let http = require("http").Server(app);
 //var iO = require("socket.io");
-const fs = require('fs');
-let parser = require('body-parser')
-const path = require('path')
+const fs = require("fs");
+let parser = require("body-parser");
+const path = require("path");
 const PORT = process.env.PORT;
-let mediasoup = require('mediasoup');
+let mediasoup = require("mediasoup");
+const { Console } = require("console");
 //var io = require("socket.io")(http,{  origins: ["http://localhost:3000"]
 //});
 
@@ -19,37 +20,35 @@ var io = require("socket.io")(http, {
   cors: {
     origin: "http://localhost:3000",
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+  },
 });
 
 //var https = require('httpolyglot');
 //var http = require("http").Server(app);
-let worker
-let rooms = {}          // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
-let peers = {}          // { socketId1: { roomName1, socket, transports = [id1, id2,] }, producers = [id1, id2,] }, consumers = [id1, id2,], peerDetails }, ...}
-let transports = []     // [ { socketId1, roomName1, transport, consumer }, ... ]
-let producers = []      // [ { socketId1, roomName1, producer, }, ... ]
-let consumers = []      // [ { socketId1, roomName1, consumer, }, ... ]
-
+let worker;
+let rooms = {}; // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
+let peers = {}; // { socketId1: { roomName1, socket, transports = [id1, id2,] }, producers = [id1, id2,] }, consumers = [id1, id2,], peerDetails }, ...}
+let transports = []; // [ { socketId1, roomName1, transport, consumer }, ... ]
+let producers = []; // [ { socketId1, roomName1, producer, }, ... ]
+let consumers = []; // [ { socketId1, roomName1, consumer, }, ... ]
 
 /*
 mediasoup use mediasoup to create worker
 */
 const createWorker = async () => {
-  worker = await mediasoup.createWorker()
+  worker = await mediasoup.createWorker();
 
-  console.log('\x1b[36m%s\x1b[0m',`WORKER START PID:${worker.pid}`);
+  console.log("\x1b[36m%s\x1b[0m", `WORKER START PID:${worker.pid}`);
 
-
-  worker.on('died', error => {
+  worker.on("died", (error) => {
     // This implies something serious happened, so kill the application
-    console.error('mediasoup worker has died')
-    setTimeout(() => process.exit(1), 2000) // exit in 2 seconds
-  })
+    console.error("mediasoup worker has died");
+    setTimeout(() => process.exit(1), 2000); // exit in 2 seconds
+  });
 
-  return worker
-}
+  return worker;
+};
 
 /*
  This is an Array of RtpCapabilities
@@ -59,46 +58,40 @@ const createWorker = async () => {
 */
 const mediaCodecs = [
   {
-    kind: 'audio',
-    mimeType: 'audio/opus',
+    kind: "audio",
+    mimeType: "audio/opus",
     clockRate: 48000,
     channels: 2,
   },
   {
-    kind: 'video',
-    mimeType: 'video/VP8',
+    kind: "video",
+    mimeType: "video/VP8",
     clockRate: 90000,
     parameters: {
-      'x-google-start-bitrate': 1000,
+      "x-google-start-bitrate": 1000,
     },
   },
-]
+];
 
-app.use(parser.urlencoded({ extended: false }))
-app.use(parser.json())
-app.get("/", express.static(path.join(__dirname, 'build')))
-
-
+app.use(parser.urlencoded({ extended: false }));
+app.use(parser.json());
+app.get("/", express.static(path.join(__dirname, "build")));
 
 const options = {
-  key: fs.readFileSync('ssl/key.pem', 'utf-8'),
-  cert: fs.readFileSync('ssl/cert.pem', 'utf-8')
-}
+  key: fs.readFileSync("ssl/key.pem", "utf-8"),
+  cert: fs.readFileSync("ssl/cert.pem", "utf-8"),
+};
 
-
-let TheRoomHelper ;
-
+let TheRoomHelper;
 
 //const httpsServer = https.createServer(options, app)
 //var io = iO(http);
-
 
 //const {GetTheStringFullRoomName} = TheRoomHelper.GetTheStringFullRoomName
 
 //this function create a router with name of the room
 
 const createRoom = async (roomName, socketId) => {
-
   /*
    worker.createRouter(options)
    options = { mediaCodecs, appData }
@@ -107,43 +100,39 @@ const createRoom = async (roomName, socketId) => {
    none of the two are required
   */
 
-  let router1
-  let peers = []
+  let router1;
+  let peers = [];
   if (rooms[roomName]) {
-    router1 = rooms[roomName].router
-    peers = rooms[roomName].peers || []
+    router1 = rooms[roomName].router;
+    peers = rooms[roomName].peers || [];
   } else {
-    router1 = await worker.createRouter({ mediaCodecs, })
+    router1 = await worker.createRouter({ mediaCodecs });
   }
-
 
   rooms[roomName] = {
     router: router1,
     peers: [...peers, socketId],
-  }
+  };
 
-  return router1
-}
+  return router1;
+};
 
-worker = createWorker()
+worker = createWorker();
 
-//set the event handler on client connection 
-io.on("connection",  socket =>{
-
-  TheRoomHelper= new RoomHelper(socket);
+//set the event handler on client connection
+io.on("connection", (socket) => {
+  TheRoomHelper = new RoomHelper(socket);
   //the schema used to valdait the input
   const schema = {
-    "properties":
-    {
-      "name": {
-        "type": "string",
-        "minLength": 5,
-        "maxLength": 8,
-        "pattern": "^[a-zA-Z0-9]{4,10}$"
-      }
-    }
-  }
-
+    properties: {
+      name: {
+        type: "string",
+        minLength: 5,
+        maxLength: 8,
+        pattern: "^[a-zA-Z0-9]{4,10}$",
+      },
+    },
+  };
 
   /*
   this function called to tell all users in the room
@@ -152,12 +141,13 @@ io.on("connection",  socket =>{
   and the room name 
   */
   const informConsumers = (roomName, socketId, id) => {
-    console.log(`just joined, id ${id} ${roomName}, ${socketId}`)
-    let room = TheRoomHelper.GetTheStringFullRoomName(roomName)
+    console.log(`just joined, id ${id} ${roomName}, ${socketId}`);
+    let room = TheRoomHelper.GetTheStringFullRoomName(roomName);
 
-    socket.to(room).emit('new-producer', { producerId: id, socketId: socketId })
-
-  }
+    socket
+      .to(room)
+      .emit("new-producer", { producerId: id, socketId: socketId });
+  };
 
   /*
   this function called to tell all users in the 
@@ -165,58 +155,46 @@ io.on("connection",  socket =>{
   live room 
   */
   const informViewrs = (roomName, id, socketId) => {
-
-    socket.to(roomName).emit('new-producer', { producerId: id, socketId: socketId })
-
-  }
+    socket
+      .to(roomName)
+      .emit("new-producer", { producerId: id, socketId: socketId });
+  };
 
   //this function called to save a producer to the producer array
   const addProducer = (producer, roomName) => {
-    producers = [
-      ...producers,
-      { socketId: socket.id, producer, roomName, }
-    ]
+    producers = [...producers, { socketId: socket.id, producer, roomName }];
 
     peers[socket.id] = {
       ...peers[socket.id],
-      producers: [
-        ...peers[socket.id].producers,
-        producer.id,
-      ]
-    }
-  }
+      producers: [...peers[socket.id].producers, producer.id],
+    };
+  };
 
   //this function addConsumer to save a addConsumer to the producer array
   const addConsumer = (consumer, roomName) => {
     // add the consumer to the consumers list
-    consumers = [
-      ...consumers,
-      { socketId: socket.id, consumer, roomName, }
-    ]
+    consumers = [...consumers, { socketId: socket.id, consumer, roomName }];
 
     // add the consumer id to the peers list
     peers[socket.id] = {
       ...peers[socket.id],
-      consumers: [
-        ...peers[socket.id].consumers,
-        consumer.id,
-      ]
-    }
-  }
+      consumers: [...peers[socket.id].consumers, consumer.id],
+    };
+  };
 
   //this function called when user is disconnect from the server
   const removeItems = (items, socketId, type) => {
-    items.forEach(item => {
+    items.forEach((item) => {
       if (item.socketId === socket.id) {
-        item[type].close()
+        item[type].close();
       }
-    })
-    items = items.filter(item => item.socketId !== socket.id)
+    });
+    items = items.filter((item) => item.socketId !== socket.id);
 
-    return items
-  }
+    return items;
+  };
 
-  //this function the client call to create webrtc transport 
+  //this function the client call to create webrtc transport
   const createWebRtcTransport = async (router) => {
     return new Promise(async (resolve, reject) => {
       try {
@@ -224,134 +202,141 @@ io.on("connection",  socket =>{
         const webRtcTransport_options = {
           listenIps: [
             {
-              ip: '0.0.0.0', // replace with relevant IP address
-              announcedIp: '127.0.0.1',
-            }
+              ip: "0.0.0.0", // replace with relevant IP address
+              announcedIp: "127.0.0.1",
+            },
           ],
           enableUdp: true,
           enableTcp: true,
           preferUdp: true,
-        }
+        };
 
         // https://mediasoup.org/documentation/v3/mediasoup/api/#router-createWebRtcTransport
-        let transport = await router.createWebRtcTransport(webRtcTransport_options)
-        //console.log(`transport id: ${transport.id}`)
+        let transport = await router.createWebRtcTransport(
+          webRtcTransport_options
+        );
+        console.log(`transport id: ${transport.id}`)
 
-        transport.on('dtlsstatechange', dtlsState => {
-          if (dtlsState === 'closed') {
-            transport.close()
+        transport.on("dtlsstatechange", (dtlsState) => {
+          if (dtlsState === "closed") {
+            transport.close();
           }
-        })
+        });
 
-        transport.on('close', () => {
-          //console.log('transport closed')
-        })
+        transport.on("close", () => {
+          console.log('transport closed')
+        });
 
-        resolve(transport)
-
+        resolve(transport);
       } catch (error) {
-        reject(error)
+        reject(error);
       }
-    })
-  }
+    });
+  };
 
   //this function used to get specifc producerTransport
   const getTransport = (socketId) => {
-    const [producerTransport] = transports.filter(transport => transport.socketId === socketId && !transport.consumer)
-    return producerTransport.transport
-  }
+    const [producerTransport] = transports.filter(
+      (transport) => transport.socketId === socketId && !transport.consumer
+    );
+    return producerTransport.transport;
+  };
 
   //this function addTransport save transport to the Transport array
   const addTransport = (transport, roomName, consumer) => {
-
     transports = [
       ...transports,
-      { socketId: socket.id, transport, roomName, consumer, }
-    ]
+      { socketId: socket.id, transport, roomName, consumer },
+    ];
 
     peers[socket.id] = {
       ...peers[socket.id],
-      transports: [
-        ...peers[socket.id].transports,
-        transport.id,
-      ]
-    }
-  }
+      transports: [...peers[socket.id].transports, transport.id],
+    };
+  };
 
   //chanche the value of isstream buy the room
   socket.on("isStream", (set, fun) => {
     if (!peers[socket.id].peerDetails.isAdmin) {
-      fun({ status: false, room: "your not admin" })
-      return
+      fun({ status: false, room: "your not admin" });
+      return;
     }
     if (peers[socket.id].peerDetails.isStream) {
-      peers[socket.id].peerDetails.isStream = false
+      peers[socket.id].peerDetails.isStream = false;
     } else {
-      peers[socket.id].peerDetails.isStream = true
+      peers[socket.id].peerDetails.isStream = true;
     }
 
-    fun({ status: true, room: "his gone" })
-
+    fun({ status: true, room: "his gone" });
   });
 
   //chanche the value of IsPublic buy the room
   socket.on("IsPublic", (set, fun) => {
     if (!peers[socket.id].peerDetails.isAdmin) {
-      fun({ status: false, room: "your not admin" })
-      return
+      fun({ status: false, room: "your not admin" });
+      return;
     }
     if (peers[socket.id].peerDetails.IsPublic) {
-      peers[socket.id].peerDetails.IsPublic = false
+      peers[socket.id].peerDetails.IsPublic = false;
     } else {
-      peers[socket.id].peerDetails.IsPublic = true
+      peers[socket.id].peerDetails.IsPublic = true;
     }
 
-    fun({ status: true, room: "his gone" })
-
+    fun({ status: true, room: "his gone" });
   });
 
   //this event ban user from the room by the admin
   socket.on("kik", (isocketId, fun) => {
-
     if (!peers[socket.id].peerDetails.isAdmin) {
-      fun({ status: false, room: "your not admin" })
-      return
+      fun({ status: false, room: "your not admin" });
+      return;
     }
-    socket.to(isocketId).emit('GoOut');
+    socket.to(isocketId).emit("GoOut");
 
-    fun({ status: true, room: "his gone" })
-
+    fun({ status: true, room: "his gone" });
   });
 
   //this check if the room Exist
   socket.on("IsRommeExist", (room, fun) => {
-console.log('IsRommeExist')
+    console.log("IsRommeExist");
     if (!TheRoomHelper.IsRommeExist(TheRoomHelper.GetRoomName(room), socket)) {
-
-      fun({ status: true, room: room })
-      return
+      fun({ status: true, room: room });
+      return;
     }
-    fun({ status: false, room: "the room " + TheRoomHelper.GetRoomName(room) + " is all ready exict" })
-
-
+    fun({
+      status: false,
+      room:
+        "the room " + TheRoomHelper.GetRoomName(room) + " is all ready exict",
+    });
   });
 
   //this event used to lock or unlock the room by the admin
   socket.on("LockTheRoom", (room, fun) => {
     if (!peers[socket.id].peerDetails.isAdmin) {
-      fun({ status: false, room: 'you are not the admin' })
-      return
+      fun({ status: false, room: "you are not the admin" });
+      return;
     }
 
     if (!peers[socket.id].peerDetails.isRoomLocked) {
-      peers[socket.id].peerDetails.isRoomLocked = true
-      fun({ status: true, room: 'room is locked' })
-      return
+      peers[socket.id].peerDetails.isRoomLocked = true;
+      fun({ status: true, room: "room is locked" });
+      return;
     }
 
-    peers[socket.id].peerDetails.isRoomLocked = false
-    fun({ status: true, room: 'room is unlocked' })
+    peers[socket.id].peerDetails.isRoomLocked = false;
+    fun({ status: true, room: "room is unlocked" });
+  });
 
+  socket.on("leave",(name)=>{
+    console.log('HERE IS THE INFORMATION HERE IS THE INFORMATION WATCH :::::::::::::::::::::::::::')
+  //  console.log(peers[socket.id])
+ const Userproduser  = producers.find(producer=>producer.socketId === socket.id)
+ Userproduser.producer.close()
+  let TheRoomLeav =   TheRoomHelper.LeavAllRooms(socket)
+  // socket.leave()
+   console.log('componentWillUnmount')
+   console.log(TheRoomLeav)
+   console.log(name)
 
 
   })
@@ -359,22 +344,19 @@ console.log('IsRommeExist')
   //this event used to HiddeTheRoom or un Hidde Th eRoom  by the admin
   socket.on("HiddeTheRoom", (room, fun) => {
     if (!peers[socket.id].peerDetails.isAdmin) {
-      fun({ status: false, room: 'you are not the admin' })
-      return
+      fun({ status: false, room: "you are not the admin" });
+      return;
     }
 
     if (!peers[socket.id].peerDetails.IsPublic) {
-      peers[socket.id].peerDetails.IsPublic = true
-      fun({ status: true, room: 'room is locked' })
-      return
+      peers[socket.id].peerDetails.IsPublic = true;
+      fun({ status: true, room: "room is locked" });
+      return;
     }
 
-    peers[socket.id].peerDetails.IsPublic = false
-    fun({ status: true, room: 'room is unlocked' })
-
-
-
-  })
+    peers[socket.id].peerDetails.IsPublic = false;
+    fun({ status: true, room: "room is unlocked" });
+  });
 
   /*
   this the frist event user call when intering the room
@@ -385,100 +367,130 @@ console.log('IsRommeExist')
   5-if the room is locked it will not allow user to join and the user becam just viewr
   */
   socket.on("CreateStream", async (room, fun) => {
-  //console.log("CREATE STARTING STREAM ")
-  //console.log(room)
-    var roomName = TheRoomHelper.GetRoomName(room);
-    var valid = ajv.validate(schema, { "name": roomName });
 
+    var roomName = TheRoomHelper.GetRoomName(room);
+    var valid = ajv.validate(schema, { name: roomName });
 
     if (!valid) {
-
-      if (ajv.errors[0].message == 'should match pattern "^[a-zA-Z0-9]{4,10}$"') {
-        fun({ status: false, room: "the name is not valid special character is not allowed" })
+      if (
+        ajv.errors[0].message == 'should match pattern "^[a-zA-Z0-9]{4,10}$"'
+      ) {
+        fun({
+          status: false,
+          room: "the name is not valid special character is not allowed",
+        });
         return;
       } else {
-        fun({ status: false, room: "the name is not valed " + ajv.errors[0].message })
+        fun({
+          status: false,
+          room: "the name is not valed " + ajv.errors[0].message,
+        });
         return;
       }
-
     }
 
     if (!TheRoomHelper.IsRommeExist(roomName, socket)) {
-
-      TheRoomHelper.LeavAllRooms(socket)
-      FullRomeName = '{"title":"' + roomName +
-        '","BossId":"' + socket.id +
-        '","TraficRoom":"' + TheRoomHelper.GenerateRoomeTrafic(socket.id) + '"}'
-
-
-      const router1 = await createRoom(roomName, socket.id)
+  
+      TheRoomHelper.LeavAllRooms(socket);
+      FullRomeName =
+        '{"title":"' +
+        roomName +
+        '","BossId":"' +
+        socket.id +
+        '","TraficRoom":"' +
+        TheRoomHelper.GenerateRoomeTrafic(socket.id) +
+        '"}';
+     
+      const router1 = await createRoom(roomName, socket.id);
+      console.log("CREATE STARTING STREAM ")
+      console.log(room)
       peers[socket.id] = {
         socket,
-        roomName,           // Name for the Router this Peer joined
+        roomName, // Name for the Router this Peer joined
         transports: [],
         producers: [],
         consumers: [],
         peerDetails: {
-          name: '',
-          isAdmin: true,          // Is this Peer the Admin?
+          name: "",
+          isAdmin: true, // Is this Peer the Admin?
           isRoomLocked: false,
           isStream: false,
-          IsPublic: TheRoomHelper.GetIsPublic(room)
-        }
-      }
+          IsPublic: TheRoomHelper.GetIsPublic(room),
+        },
+      };
+      console.log(`SHOING THE PEER DETILE`);
+      //console.log( peers[socket.id])
 
-      const rtpCapabilities = router1.rtpCapabilities
+      const rtpCapabilities = router1.rtpCapabilities;
       //console.log('JOINGING THE ROOM ')
       //console.log(FullRomeName)
       socket.join(FullRomeName);
-      socket.to("mainrrom").emit('AddRoom', { roomName })
+      socket.to("mainrrom").emit("AddRoom", { roomName });
 
-     // console.log(roomName)
-     // console.log(FullRomeName)
-     // console.log(io.sockets.adapter.rooms)
-      fun({ status: true, room: roomName, First: true, UserId: socket.id, rtpCapabilities: rtpCapabilities })
-      return
+      // console.log(roomName)
+      // console.log(FullRomeName)
+      // console.log(io.sockets.adapter.rooms)
+      fun({
+        status: true,
+        room: roomName,
+        First: true,
+        UserId: socket.id,
+        rtpCapabilities: rtpCapabilities,
+      });
+      return;
     }
 
-    if (TheRoomHelper.IsRommeExist(roomName, socket) &&
-      !TheRoomHelper.IsPublic(room,peers) &&
-      !TheRoomHelper.IsRoomFull(TheRoomHelper.GetTheStringFullRoomName(roomName))) {
+    if (
+      TheRoomHelper.IsRommeExist(roomName, socket) &&
+      !TheRoomHelper.IsViewer(room, peers) &&
+      !TheRoomHelper.IsRoomFull(
+        TheRoomHelper.GetTheStringFullRoomName(roomName)
+      )
+    ) {
       UserId = TheRoomHelper.GenerateUserId(socket.id);
-      FullRomeName = TheRoomHelper.GetTheFullRoomName(roomName)
+      FullRomeName = TheRoomHelper.GetTheFullRoomName(roomName);
 
-
-      let admin = TheRoomHelper.GetRoomBossId(roomName, rooms, peers)
+      let admin = TheRoomHelper.GetRoomBossId(roomName, rooms, peers);
 
       if (admin.peerDetails.isRoomLocked) {
-        fun({ status: false, room: "the room " + roomName + " is locked " })
-        return
+        fun({ status: false, room: "the room " + roomName + " is locked " });
+        return;
       }
 
-      let BossId = FullRomeName.BossId
-      FullRomeName = '{"title":"' + FullRomeName.title +
-        '","BossId":"' + FullRomeName.BossId +
-        '","TraficRoom":"' + FullRomeName.TraficRoom + '"}'
+      console.log(`FULL ROOM NAME IS HERE:`);
+      console.log(roomName);
 
-  
+      let BossId = FullRomeName.BossId;
+      FullRomeName =
+        '{"title":"' +
+        FullRomeName.title +
+        '","BossId":"' +
+        FullRomeName.BossId +
+        '","TraficRoom":"' +
+        FullRomeName.TraficRoom +
+        '"}';
+        console.log('JOINING THE ROOM')
+        console.log(FullRomeName)
+        console.log('ALL THE ROOMS NAMES')
 
-      socket.join(FullRomeName);
+        console.log(socket.adapter.rooms)
+        socket.join(FullRomeName);
 
-      const router1 = await createRoom(roomName, socket.id)
+      const router1 = await createRoom(roomName, socket.id);
 
       peers[socket.id] = {
         socket,
-        roomName,           // Name for the Router this Peer joined
+        roomName, // Name for the Router this Peer joined
         transports: [],
         producers: [],
         consumers: [],
         peerDetails: {
-          name: '',
-          isAdmin: false,   // Is this Peer the Admin?
-        }
-      }
+          name: "",
+          isAdmin: false, // Is this Peer the Admin?
+        },
+      };
 
-      const rtpCapabilities = router1.rtpCapabilities
-
+      const rtpCapabilities = router1.rtpCapabilities;
 
       fun({
         status: true,
@@ -486,106 +498,104 @@ console.log('IsRommeExist')
         First: false,
         UserId: UserId,
         room: TheRoomHelper.GetRoomName(room),
-        rtpCapabilities: rtpCapabilities
-      })
+        rtpCapabilities: rtpCapabilities,
+      });
 
       return;
     }
 
-
     UserId = TheRoomHelper.GenerateUserId(socket.id);
-    FullRomeName = TheRoomHelper.GetTheFullRoomName(room)
-    let peerslist = Object.values(peers)
+    FullRomeName = TheRoomHelper.GetTheFullRoomName(
+      TheRoomHelper.GetRoomName(room)
+    );
+    let peerslist = Object.values(peers);
     try {
-      let admin = peerslist.find(peer => peer.peerDetails.isAdmin === true)
+      let admin = peerslist.find((peer) => peer.peerDetails.isAdmin === true);
       if (peers[admin.socket.id].peerDetails.isStream) {
-        fun({ status: false, room: "the room " + TheRoomHelper.GetRoomName(room) + " is not Streamed " })
-        return
+        fun({
+          status: false,
+          room:
+            "the room " + TheRoomHelper.GetRoomName(room) + " is not Streamed ",
+        });
+        return;
       }
     } catch (e) {
-      console.error(e)
+      console.error(e);
     }
-console.log(`THE FULL ROOM NAME `);
+    console.log(`THE FULL ROOM NAME `);
+    console.log(`THE FULL ROOM NAME ========================`);
+    console.log(room);
 
-console.log(room)
-
+    console.log(TheRoomHelper.GetRoomName(room));
 
     TraficRoom = FullRomeName.TraficRoom;
 
     socket.join(TraficRoom);
-    let clients = Object.getOwnPropertyNames(io.sockets.adapter.rooms[TraficRoom].sockets)
+    let clients = Object.getOwnPropertyNames(
+      io.sockets.adapter.rooms[TraficRoom].sockets
+    );
 
-    const router1 = await createRoom(TraficRoom, socket.id)
+    const router1 = await createRoom(TraficRoom, socket.id);
     var roomName = TraficRoom;
     peers[socket.id] = {
       socket,
-      roomName,           // Name for the Router this Peer joined
+      roomName, // Name for the Router this Peer joined
       transports: [],
       producers: [],
       consumers: [],
       peerDetails: {
-        name: '',
-        isAdmin: false,   // Is this Peer the Admin?
-      }
-    }
-
+        name: "",
+        isAdmin: false, // Is this Peer the Admin?
+      },
+    };
 
     if (clients[0] == socket.id) {
+      let router1 = rooms[FullRomeName.title].router;
 
-      let router1 = rooms[FullRomeName.title].router
-
-      let router2 = rooms[TraficRoom].router
-      producers.forEach(async producerData => {
+      let router2 = rooms[TraficRoom].router;
+      producers.forEach(async (producerData) => {
         if (producerData.roomName === FullRomeName.title) {
-
           try {
-
-            await router1.pipeToRouter({ producerId: producerData.producer.id, router: router2 });
-
-          } catch (e) {
-
-          }
-
-
+            await router1.pipeToRouter({
+              producerId: producerData.producer.id,
+              router: router2,
+            });
+          } catch (e) {}
         }
-      })
-
+      });
     }
 
+    const rtpCapabilities = router1.rtpCapabilities;
 
-    const rtpCapabilities = router1.rtpCapabilities
-
-    fun({ status: false, BossId: FullRomeName.BossId, rtpCapabilities: rtpCapabilities, room: "the room " + TraficRoom + " is watching  " })
-
-
-
+    fun({
+      status: false,
+      BossId: FullRomeName.BossId,
+      rtpCapabilities: rtpCapabilities,
+      room: "the room " + TraficRoom + " is watching  ",
+    });
   });
 
   //this event save the imge sent by the user as thumnal for live room
   socket.on("saveimg", (img, fun) => {
     var base64Data = img.replace(/^data:image\/png;base64,/, "");
 
-    var imgname = TheRoomHelper.GetRoomsIamIn(socket) + '.png';
-    console.log('SAVING IMGE '+imgname)
+    var imgname = TheRoomHelper.GetRoomsIamIn(socket) + ".png";
+    console.log("SAVING IMGE " + imgname);
 
-    fs.writeFile('uploads/' + imgname, base64Data, 'base64', err => {
+    fs.writeFile("uploads/" + imgname, base64Data, "base64", (err) => {
       if (err) throw err;
-    })
-
+    });
   });
 
   //the event display current live room and add or remove at real time
   socket.on("getroom", (room, fun) => {
-
     let rroommss = TheRoomHelper.GetRoomsNames(peers);
-    console.log('SHOWING THE ROOMS IN LIST:');
-    console.log(rroommss)
+    console.log("SHOWING THE ROOMS IN LIST:");
+    console.log(rroommss);
 
-    socket.join("mainrrom")
-    
-    fun(rroommss)
+    socket.join("mainrrom");
 
-
+    fun(rroommss);
   });
 
   //the event take a privet message from user and frowrd it to specifc user
@@ -594,341 +604,406 @@ console.log(room)
     //console.log(id)
 
     socket.to(id.id).emit("PrivetMessage", id.Message);
-    fun({ status: true, room: "message sent" })
-  })
+    fun({ status: true, room: "message sent" });
+  });
 
   //the event take a  message and brodcast it to the room
   socket.on("Message", (room, Message) => {
-    FullRomeName = TheRoomHelper.GetTheFullRoomName(TheRoomHelper.GetRoomName(room))
-    FullRomeName = '{"title":"' + FullRomeName.title + '","BossId":"' + FullRomeName.BossId + '","TraficRoom":"' + FullRomeName.TraficRoom + '"}'
+    FullRomeName = TheRoomHelper.GetTheFullRoomName(
+      TheRoomHelper.GetRoomName(room)
+    );
+    FullRomeName =
+      '{"title":"' +
+      FullRomeName.title +
+      '","BossId":"' +
+      FullRomeName.BossId +
+      '","TraficRoom":"' +
+      FullRomeName.TraficRoom +
+      '"}';
     //console.log("the room iam emmetin to ==============>")
     //console.log(FullRomeName)
     socket.to(FullRomeName.TraficRoom).emit("Message", {
-      Message
+      Message,
     });
 
     socket.to(FullRomeName).emit("Message", {
-      Message
+      Message,
     });
+  });
 
+  //when the user disconnected this event whill close all producer /consumer
+  socket.on("disconnect", () => {
 
-  })
-
-  //when the user disconnected this event whill close all producer /consumer 
-  socket.on('disconnect', () => {
-    //   console.log( TheRoomHelper.GetRoomsIamIn(socket)[0]) // TheRoomHelper.GetRoomsIamIn(socket)[0]
-
+    
     // do some cleanup
-    //console.log('peer disconnected')
-    consumers = removeItems(consumers, socket.id, 'consumer')
-    producers = removeItems(producers, socket.id, 'producer')
-    transports = removeItems(transports, socket.id, 'transport')
-    //TheRoomHelper.IsRoomClosed(socket)
-    if (!peers[socket.id]) return
-    var TheroomName = peers[socket.id].roomName
+
+    consumers = removeItems(consumers, socket.id, "consumer");
+    producers = removeItems(producers, socket.id, "producer");
+    transports = removeItems(transports, socket.id, "transport");
+
+    let TheroomName = peers[socket.id]?.roomName;
+
+if(!TheroomName) return
     if (!TheRoomHelper.IsRommeExist(TheroomName, socket)) {
       if (TheroomName !== "mainrrom" && !TheroomName.includes("@")) {
 
-        socket.to("mainrrom").emit('DelteRoom', { TheroomName })
-        //console.log("the room is emptyed plz notify the main room and sorry about the excplit lanbuch of the invoicn e ent ")}
+        socket.to("mainrrom").emit("DelteRoom", { TheroomName });
 
+        
         fs.unlink("uploads/" + TheroomName + ".png", (err) => {
           if (err) {
-            console.error(err)
-            return
+            console.error(err);
+            return;
           }
 
           //file removed
-        })
-
-
-
+        });
       }
+      return
+    }
 
+    FullRomeName = TheRoomHelper.GetTheFullRoomName(TheroomName);
+
+    if (FullRomeName) {
+      FullstringRomeName =
+        '{"title":"' +
+        FullRomeName.title +
+        '","BossId":"' +
+        FullRomeName.BossId +
+        '","TraficRoom":"' +
+        FullRomeName.TraficRoom +
+        '"}';
     }
-    FullRomeName = TheRoomHelper.GetTheFullRoomName(TheroomName)
-    if (FullRomeName !== null) {
-      FullstringRomeName = '{"title":"' + FullRomeName.title +
-        '","BossId":"' + FullRomeName.BossId + '","TraficRoom":"' + FullRomeName.TraficRoom + '"}'
-    }
+
     if (peers[socket.id].peerDetails.isAdmin) {
       if (FullRomeName !== null) {
+    
+        if(FullRomeName ==='undefined') return;
+        
+        //if (io.sockets.adapter.rooms.length) return;
+      //  console.log(FullstringRomeName)
+      
+        let clients = TheRoomHelper.GetAllUsersInRoom(FullstringRomeName)
+        const [first] = clients;
+        console.log(first)
 
-        let clients = Object.getOwnPropertyNames(io.sockets.adapter.rooms[FullstringRomeName].sockets)
         if (clients.length !== 0) {
+          peers[first].peerDetails.isAdmin = true;
 
-          peers[clients[0]].peerDetails.isAdmin = true
-          peers[clients[0]].peerDetails.isRoomLocked = peers[socket.id].peerDetails.isRoomLocked
-          peers[clients[0]].peerDetails.IsPublic = peers[socket.id].peerDetails.IsPublic
-          peers[clients[0]].peerDetails.isStream = peers[socket.id].peerDetails.isStream
-          console.log("admin switched")
-          //        socket.to(FullRomeName).emit('switchAdmin', {admin:peers[clients[0]].producers})
-          socket.to(clients[0]).emit('switchAdminSetting', {
-            isRoomLocked: peers[socket.id].peerDetails.isRoomLocked
-            , isStream: peers[socket.id].peerDetails.isStream
-            , IsPublic: peers[socket.id].peerDetails.IsPublic
-          })
-          socket.to(FullstringRomeName).emit('switchAdmin', { admin: clients[0] })
-          socket.to(FullRomeName.TraficRoom).emit('switchAdmin', { admin: clients[0] })
+          peers[first].peerDetails.isRoomLocked =
+            peers[socket.id].peerDetails.isRoomLocked;
 
+          peers[first].peerDetails.IsPublic =
+            peers[socket.id].peerDetails.IsPublic;
 
+          peers[first].peerDetails.isStream =
+            peers[socket.id].peerDetails.isStream;
+
+          console.log("admin switched");
+
+          socket.to(first).emit("switchAdminSetting", {
+            isRoomLocked: peers[socket.id].peerDetails.isRoomLocked,
+            isStream: peers[socket.id].peerDetails.isStream,
+            IsPublic: peers[socket.id].peerDetails.IsPublic,
+          });
+          socket
+            .to(FullstringRomeName)
+            .emit("switchAdmin", { admin:first });
+          socket
+            .to(FullRomeName.TraficRoom)
+            .emit("switchAdmin", { admin: first });
         }
       }
-
     }
     if (FullRomeName !== null) {
-      socket.to(FullRomeName.TraficRoom).emit('FreeToJoin', { status: true })
-
+      socket.to(FullRomeName.TraficRoom).emit("FreeToJoin", { status: true });
     }
 
+    const { roomName } = peers[socket.id];
 
-
-    const { roomName } = peers[socket.id]
-
-    delete peers[socket.id]
+    delete peers[socket.id];
 
     // remove socket from room
 
     try {
       rooms[roomName] = {
         router: rooms[roomName].router,
-        peers: rooms[roomName].peers.filter(socketId => socketId !== socket.id)
-      }
-    } catch (e) { }
-
-
-  })
+        peers: rooms[roomName].peers.filter(
+          (socketId) => socketId !== socket.id
+        ),
+      };
+    } catch (e) {}
+  });
 
   //asking the server to resv a specifc transport
-  socket.on('consume', async ({ rtpCapabilities, remoteProducerId, serverConsumerTransportId }, callback) => {
-    try {
-      const { roomName } = peers[socket.id]
-      const usocketId = producers.find(producerdata => producerdata.producer.id == remoteProducerId)
+  socket.on(
+    "consume",
+    async (
+      { rtpCapabilities, remoteProducerId, serverConsumerTransportId },
+      callback
+    ) => {
+      console.log('consume IS THERE ERROR HAPENING HERER')
+      try {
+        const { roomName } = peers[socket.id];
+        const usocketId = producers.find(
+          (producerdata) => producerdata.producer.id == remoteProducerId
+        );
 
-      const router = rooms[roomName].router
-      let consumerTransport = transports.find(transportData => (
-        transportData.consumer && transportData.transport.id == serverConsumerTransportId
-      )).transport
+        const router = rooms[roomName].router;
+        let consumerTransport = transports.find(
+          (transportData) =>
+            transportData.consumer &&
+            transportData.transport.id == serverConsumerTransportId
+        ).transport;
 
-      // check if the router can consume the specified producer
-      if (router.canConsume({
-        producerId: remoteProducerId,
-        rtpCapabilities
-      })) {
-        // transport can now consume and return a consumer
-        const consumer = await consumerTransport.consume({
-          producerId: remoteProducerId,
-          rtpCapabilities,
-          paused: true,
-        })
+        // check if the router can consume the specified producer
+        if (
+          router.canConsume({
+            producerId: remoteProducerId,
+            rtpCapabilities,
+          })
+        ) {
+          // transport can now consume and return a consumer
+          const consumer = await consumerTransport.consume({
+            producerId: remoteProducerId,
+            rtpCapabilities,
+            paused: true,
+          });
 
-        consumer.on('transportclose', () => {
-          //console.log('transport close from consumer')
-        })
+          consumer.on("transportclose", () => {
+            //console.log('transport close from consumer')
+          });
 
-        consumer.on('producerclose', () => {
-          console.log('producer of consumer closed')
-          console.log(usocketId.socketId)
-          socket.emit('producer-closed', { remoteProducerId: remoteProducerId, socketId: usocketId.socketId })
+          consumer.on("producerclose", () => {
+            console.log("producer of consumer closed");
+            console.log(usocketId.socketId);
+            socket.emit("producer-closed", {
+              remoteProducerId: remoteProducerId,
+              socketId: usocketId.socketId,
+            });
 
-          consumerTransport.close([])
-          transports = transports.filter(transportData => transportData.transport.id !== consumerTransport.id)
-          consumer.close()
-          consumers = consumers.filter(consumerData => consumerData.consumer.id !== consumer.id)
-        })
+            consumerTransport.close([]);
+            transports = transports.filter(
+              (transportData) =>
+                transportData.transport.id !== consumerTransport.id
+            );
+            consumer.close();
+            consumers = consumers.filter(
+              (consumerData) => consumerData.consumer.id !== consumer.id
+            );
+          });
 
-        addConsumer(consumer, roomName)
+          addConsumer(consumer, roomName);
 
-        // from the consumer extract the following params
-        // to send back to the Client
-        const params = {
-          id: consumer.id,
-          producerId: remoteProducerId,
-          kind: consumer.kind,
-          rtpParameters: consumer.rtpParameters,
-          serverConsumerId: consumer.id,
+          // from the consumer extract the following params
+          // to send back to the Client
+          const params = {
+            id: consumer.id,
+            producerId: remoteProducerId,
+            kind: consumer.kind,
+            rtpParameters: consumer.rtpParameters,
+            serverConsumerId: consumer.id,
+          };
+
+          // send the parameters to the client
+          callback({ params });
         }
-
-        // send the parameters to the client
-        callback({ params })
+      } catch (error) {
+        //console.log(error.message)
+        callback({
+          params: {
+            error: error,
+          },
+        });
       }
-    } catch (error) {
-      //console.log(error.message)
-      callback({
-        params: {
-          error: error
-        }
-      })
     }
-  })
+  );
 
   // start consumeing the serverconsumeroid
-  socket.on('consumer-resume', async ({ serverConsumerId }) => {
-    //  console.log('consumer resume')
-    const { consumer } = consumers.find(consumerData => consumerData.consumer.id === serverConsumerId)
-    await consumer.resume()
-  })
+  socket.on("consumer-resume", async ({ serverConsumerId }) => {
+      console.log('consumer resume IS THERE ERROR HAPENNING HERER')
+      console.log(`IS THERE ERROR HAPPENG HERE IN THE CONSUMERS`)
+    //  console.log(consumers )
+      console.log(serverConsumerId )
+    const { consumer } = consumers.find(
+      (consumerData) => consumerData.consumer.id === serverConsumerId
+    );
+   // console.log(consumer.id)
+    await consumer.resume();
+  });
 
   //the event will reterun back to the user the currnt produsers in the room
-  socket.on('getProducers', ({ isViewr, roomName }, callback) => {
+  socket.on("getProducers", ({ isViewr, roomName }, callback) => {
     //return all producer transports
-
+    console.log('WHAT IS THIS WERID CONRDIAL')
+    console.log(isViewr)
+    console.log(roomName)
+    let theroomName;
     if (!isViewr) {
-      var roomName = peers[socket.id].roomName
+       theroomName = peers[socket.id].roomName;
     }
 
     //const roomName =  Mainroom
 
-
-    let producerList = []
-    producers.forEach(producerData => {
-      if (producerData.socketId !== socket.id && producerData.roomName === roomName) {
-        producerList = [...producerList, [producerData.producer.id, producerData.socketId]]
+    let producerList = [];
+    producers.forEach((producerData) => {
+      if (
+        producerData.socketId !== socket.id &&
+        producerData.roomName === theroomName
+      ) {
+        producerList = [
+          ...producerList,
+          [producerData.producer.id, producerData.socketId],
+        ];
       }
-    })
+    });
 
     // return the producer list back to the client
-    callback(producerList)
-  })
+    callback(producerList);
+  });
 
   //this event a user called to create wenrtctransport  send/resv
-  socket.on('createWebRtcTransport', async ({ consumer }, callback) => {
+  socket.on("createWebRtcTransport", async ({ consumer }, callback) => {
     // get Room Name from Peer's properties
 
-    const roomName = peers[socket.id].roomName
+    const roomName = peers[socket.id].roomName;
 
     // get Router (Room) object this peer is in based on RoomName
     // //console.log(roomName)
-    const router = rooms[roomName].router
-
+    const router = rooms[roomName].router;
 
     createWebRtcTransport(router).then(
-      transport => {
+      (transport) => {
         callback({
           params: {
             id: transport.id,
             iceParameters: transport.iceParameters,
             iceCandidates: transport.iceCandidates,
             dtlsParameters: transport.dtlsParameters,
-          }
-        })
+          },
+        });
 
         // add transport to Peer's properties
-        addTransport(transport, roomName, consumer)
+        addTransport(transport, roomName, consumer);
       },
-      error => {
-        //console.log(error)
-      })
-  })
+      (error) => {
+        console.log(error)
+      }
+    );
+  });
 
   //this event check wither the room is abvalple to join
-  socket.on('isFreeToJoin', ({ roomName }, fun) => {
-    if (TheRoomHelper.IsRoomFull(TheRoomHelper.GetTheStringFullRoomName(roomName), socket)) {
-      fun({ status: false })
+  socket.on("isFreeToJoin", ({ roomName }, fun) => {
+    if (
+      TheRoomHelper.IsRoomFull(
+        TheRoomHelper.GetTheStringFullRoomName(roomName),
+        socket
+      )
+    ) {
+      fun({ status: false });
     } else {
-      fun({ status: true })
-
+      fun({ status: true });
     }
+  });
 
-  })
-
-  //this event connect a user transport  to server transport 
-  socket.on('transport-connect', ({ dtlsParameters }) => {
+  //this event connect a user transport  to server transport
+  socket.on("transport-connect", ({ dtlsParameters }) => {
     //console.log('DTLS PARAMS... ', { dtlsParameters })
     try {
-      getTransport(socket.id).connect({ dtlsParameters })
-
-    } catch (e) {
-    }
-
-  })
-
-  //in this event the user start producing stream to the server
-  socket.on('transport-produce', async ({ kind, rtpParameters, appData }, callback) => {
-    // call produce based on the prameters from the client
-
-    const producer = await getTransport(socket.id).produce({
-      kind,
-      rtpParameters,
-    })
-
-
-    // add producer to the producers array
-    const { roomName } = peers[socket.id]
-
-    addProducer(producer, roomName)
-console.log(roomName)
-    let TraficRoom = TheRoomHelper.GetTheFullRoomName(roomName)
-    //  console.log("here is roomName")
-    //  console.log(roomName)
-      console.log("here is TraficRoom")
-      console.log(TraficRoom)
-    let router1 = rooms[roomName].router
-    if (rooms[TraficRoom.TraficRoom]) {
-      let router2 = rooms[TraficRoom.TraficRoom].router
-      await router1.pipeToRouter({ producerId: producer.id, router: router2 });
-      //console.log("=========piping is done==========piping is done===========piping is done======= ")
-    }
-
-    informConsumers(roomName, socket.id, producer.id)
-
-    informViewrs(TraficRoom.TraficRoom, producer.id, socket.id)
-
-    //console.log('Producer ID: ', producer.id, producer.kind)
-
-    producer.on('transportclose', () => {
-      //console.log('transport for this producer closed ')
-      producer.close()
-    })
-
-    // Send back to the client the Producer's id
-    callback({
-      id: producer.id,
-      producersExist: producers.length > 1 ? true : false
-    })
-  })
-
-  //in this event the user ask the server to recv a stram from the specifc server consumer transport
-  socket.on('transport-recv-connect', async ({ dtlsParameters, serverConsumerTransportId }) => {
-    //console.log(`DTLS PARAMS: ${dtlsParameters}`)
-    try {
-      const consumerTransport = transports.find(transportData => (
-        transportData.consumer && transportData.transport.id == serverConsumerTransportId
-      )).transport
-      await consumerTransport.connect({ dtlsParameters })
-
+      getTransport(socket.id).connect({ dtlsParameters });
     } catch (e) {
       console.log(e)
     }
+  });
 
-  })
+  //in this event the user start producing stream to the server
+  socket.on(
+    "transport-produce",
+    async ({ kind, rtpParameters, appData }, callback) => {
+      // call produce based on the prameters from the client
 
-});
+      const producer = await getTransport(socket.id).produce({
+        kind,
+        rtpParameters,
+      });
 
+      // add producer to the producers array
+      const { roomName } = peers[socket.id];
 
+      addProducer(producer, roomName);
+     //console.log(roomName);
+      let TraficRoom = TheRoomHelper.GetTheFullRoomName(roomName);
+      //  console.log("here is roomName")
+      //  console.log(roomName)
+      //console.log("here is TraficRoom");
+      //console.log(TraficRoom);
+      let router1 = rooms[roomName].router;
+console.log(TraficRoom)
+      if (rooms[TraficRoom?.TraficRoom]) {
+        let router2 = rooms[TraficRoom.TraficRoom].router;
+        await router1.pipeToRouter({
+          producerId: producer.id,
+          router: router2,
+        });
+        //console.log("=========piping is done==========piping is done===========piping is done======= ")
+      }
 
-app.get('/imges/:name', function (req, res) {
-  let filename = path.join(__dirname, 'uploads/', req.params.name)
-  let loadingRoom = path.join(__dirname, 'uploads/', "loadingRoom.png")
-  try {
-    if (fs.existsSync(filename)) return res.sendFile(filename)
-    return res.sendFile(loadingRoom)
-  }
-  catch(err){
-    console.error(err)
+      informConsumers(roomName, socket.id, producer.id);
+
+      informViewrs(TraficRoom.TraficRoom, producer.id, socket.id);
+
+      //console.log('Producer ID: ', producer.id, producer.kind)
+
+      producer.on("transportclose", () => {
+        //console.log('transport for this producer closed ')
+        producer.close();
+      });
+
+      // Send back to the client the Producer's id
+      callback({
+        id: producer.id,
+        producersExist: producers.length > 1 ? true : false,
+      });
     }
-})
+  );
 
-app.use(express.static(path.join(__dirname, 'build')));
-
-app.get('/', function (req, res) {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  //in this event the user ask the server to recv a stram from the specifc server consumer transport
+  socket.on(
+    "transport-recv-connect",
+    async ({ dtlsParameters, serverConsumerTransportId }) => {
+      //console.log(`DTLS PARAMS: ${dtlsParameters}`)
+      console.log( 'ITHECK THE ERORR MY BE HABINGIN HERE')
+      try {
+        const consumerTransport = transports.find(
+          (transportData) =>
+            transportData.consumer &&
+            transportData.transport.id == serverConsumerTransportId
+        ).transport;
+        await consumerTransport.connect({ dtlsParameters });
+      } catch (e) {
+        console.log(e);
+      }
+    }
+  );
 });
 
+app.get("/imges/:name", function (req, res) {
+  let filename = path.join(__dirname, "uploads/", req.params.name);
+  let loadingRoom = path.join(__dirname, "uploads/", "loadingRoom.png");
+  try {
+    if (fs.existsSync(filename)) return res.sendFile(filename);
+    return res.sendFile(loadingRoom);
+  } catch (err) {
+    console.error(err);
+  }
+});
 
+app.use(express.static(path.join(__dirname, "build")));
 
+app.get("/", function (req, res) {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
 
-http.listen(PORT,()=>{
-  console.log('\x1b[33m%s\x1b[0m',`NODEJS SERVER RUNNING ON PORT:${PORT}`);
-
-})
+http.listen(PORT, () => {
+  console.log("\x1b[33m%s\x1b[0m", `NODEJS SERVER RUNNING ON PORT:${PORT}`);
+});
