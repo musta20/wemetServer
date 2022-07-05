@@ -1,11 +1,12 @@
-import { RtpObserver } from './RtpObserver';
+import { RtpObserver, RtpObserverEvents, RtpObserverObserverEvents } from './RtpObserver';
 import { Producer } from './Producer';
+import { EnhancedEventEmitter } from './EnhancedEventEmitter';
 export interface ActiveSpeakerObserverOptions {
     interval?: number;
     /**
      * Custom application data.
      */
-    appData?: any;
+    appData?: Record<string, unknown>;
 }
 export interface ActiveSpeakerObserverActivity {
     /**
@@ -13,7 +14,17 @@ export interface ActiveSpeakerObserverActivity {
      */
     producer: Producer;
 }
-export declare class ActiveSpeakerObserver extends RtpObserver {
+export declare type ActiveSpeakerObserverEvents = RtpObserverEvents & {
+    dominantspeaker: [{
+        producer: Producer;
+    }];
+};
+export declare type ActiveSpeakerObserverObserverEvents = RtpObserverObserverEvents & {
+    dominantspeaker: [{
+        producer: Producer;
+    }];
+};
+export declare class ActiveSpeakerObserver extends RtpObserver<ActiveSpeakerObserverEvents> {
     /**
      * @private
      */
@@ -21,6 +32,7 @@ export declare class ActiveSpeakerObserver extends RtpObserver {
     /**
      * Observer.
      */
+    get observer(): EnhancedEventEmitter<ActiveSpeakerObserverObserverEvents>;
     private handleWorkerNotifications;
 }
 //# sourceMappingURL=ActiveSpeakerObserver.d.ts.map

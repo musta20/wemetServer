@@ -11,12 +11,17 @@
 #include "RTC/RTCP/FeedbackPs.hpp"
 #include "RTC/RTCP/FeedbackRtp.hpp"
 #include "RTC/RTCP/XrReceiverReferenceTime.hpp"
+#include <absl/container/inlined_vector.h>
 #include <cstring>  // std::memcpy()
 #include <iterator> // std::ostream_iterator
 #include <sstream>  // std::ostringstream
 
 namespace RTC
 {
+	/* Static. */
+
+	static constexpr unsigned int SendNackDelay{ 10u }; // In ms.
+
 	/* Instance methods. */
 
 	Producer::Producer(const std::string& id, RTC::Producer::Listener* listener, json& data)
@@ -272,6 +277,11 @@ namespace RTC
 			if (this->rtpHeaderExtensionIds.toffset == 0u && exten.type == RTC::RtpHeaderExtensionUri::Type::TOFFSET)
 			{
 				this->rtpHeaderExtensionIds.toffset = exten.id;
+			}
+
+			if (this->rtpHeaderExtensionIds.absCaptureTime == 0u && exten.type == RTC::RtpHeaderExtensionUri::Type::ABS_CAPTURE_TIME)
+			{
+				this->rtpHeaderExtensionIds.absCaptureTime = exten.id;
 			}
 		}
 
@@ -1133,7 +1143,7 @@ namespace RTC
 		}
 
 		// Create a RtpStreamRecv for receiving a media stream.
-		auto* rtpStream = new RTC::RtpStreamRecv(this, params);
+		auto* rtpStream = new RTC::RtpStreamRecv(this, params, SendNackDelay);
 
 		// Insert into the maps.
 		this->mapSsrcRtpStream[ssrc]              = rtpStream;
@@ -1334,6 +1344,21 @@ namespace RTC
 
 					extensions.emplace_back(
 					  static_cast<uint8_t>(RTC::RtpHeaderExtensionUri::Type::TOFFSET), extenLen, bufferPtr);
+
+					bufferPtr += extenLen;
+				}
+
+				// Proxy http://www.webrtc.org/experiments/rtp-hdrext/abs-capture-time.
+				extenValue = packet->GetExtension(this->rtpHeaderExtensionIds.absCaptureTime, extenLen);
+
+				if (extenValue)
+				{
+					std::memcpy(bufferPtr, extenValue, extenLen);
+
+					extensions.emplace_back(
+					  static_cast<uint8_t>(RTC::RtpHeaderExtensionUri::Type::ABS_CAPTURE_TIME),
+					  extenLen,
+					  bufferPtr);
 
 					// Not needed since this is the latest added extension.
 					// bufferPtr += extenLen;

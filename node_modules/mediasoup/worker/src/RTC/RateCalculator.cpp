@@ -29,32 +29,19 @@ namespace RTC
 			if (this->newestItemIndex >= this->windowItems)
 				this->newestItemIndex = 0;
 
-			// Newest index overlaps with the oldest one, remove it.
-			if (this->newestItemIndex == this->oldestItemIndex && this->oldestItemIndex != -1)
-			{
-				MS_WARN_TAG(
-				  info,
-				  "calculation buffer full, windowSizeMs:%zu ms windowItems:%" PRIu16,
-				  this->windowSizeMs,
-				  this->windowItems);
-
-				BufferItem& oldestItem = buffer[this->oldestItemIndex];
-				this->totalCount -= oldestItem.count;
-				oldestItem.count = 0u;
-				oldestItem.time  = 0u;
-				if (++this->oldestItemIndex >= this->windowItems)
-					this->oldestItemIndex = 0;
-			}
+			MS_ASSERT(
+			  this->newestItemIndex != this->oldestItemIndex || this->oldestItemIndex == -1,
+			  "newest index overlaps with the oldest one");
 
 			// Set the newest item.
-			BufferItem& item = buffer[this->newestItemIndex];
+			BufferItem& item = this->buffer[this->newestItemIndex];
 			item.count       = size;
 			item.time        = nowMs;
 		}
 		else
 		{
 			// Update the newest item.
-			BufferItem& item = buffer[this->newestItemIndex];
+			BufferItem& item = this->buffer[this->newestItemIndex];
 			item.count += size;
 		}
 
@@ -98,23 +85,23 @@ namespace RTC
 		if (this->newestItemIndex < 0 || this->oldestItemIndex < 0)
 			return;
 
-		uint64_t newoldestTime = nowMs - this->windowSizeMs;
+		uint64_t newOldestTime = nowMs - this->windowSizeMs;
 
 		// Oldest item already removed.
-		if (newoldestTime <= this->oldestItemStartTime)
+		if (newOldestTime < this->oldestItemStartTime)
 			return;
 
 		// A whole window size time has elapsed since last entry. Reset the buffer.
-		if (newoldestTime > this->newestItemStartTime)
+		if (newOldestTime >= this->newestItemStartTime)
 		{
 			Reset();
 
 			return;
 		}
 
-		while (this->oldestItemStartTime < newoldestTime)
+		while (newOldestTime >= this->oldestItemStartTime)
 		{
-			BufferItem& oldestItem = buffer[this->oldestItemIndex];
+			BufferItem& oldestItem = this->buffer[this->oldestItemIndex];
 			this->totalCount -= oldestItem.count;
 			oldestItem.count = 0u;
 			oldestItem.time  = 0u;
@@ -122,7 +109,7 @@ namespace RTC
 			if (++this->oldestItemIndex >= this->windowItems)
 				this->oldestItemIndex = 0;
 
-			const BufferItem& newOldestItem = buffer[this->oldestItemIndex];
+			const BufferItem& newOldestItem = this->buffer[this->oldestItemIndex];
 			this->oldestItemStartTime       = newOldestItem.time;
 		}
 	}

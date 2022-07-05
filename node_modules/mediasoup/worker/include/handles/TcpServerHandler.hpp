@@ -4,8 +4,8 @@
 #include "common.hpp"
 #include "handles/TcpConnectionHandler.hpp"
 #include <uv.h>
+#include <absl/container/flat_hash_set.h>
 #include <string>
-#include <unordered_set>
 
 class TcpServerHandler : public TcpConnectionHandler::Listener
 {
@@ -13,7 +13,7 @@ public:
 	/**
 	 * uvHandle must be an already initialized and binded uv_tcp_t pointer.
 	 */
-	TcpServerHandler(uv_tcp_t* uvHandle, int backlog);
+	TcpServerHandler(uv_tcp_t* uvHandle);
 	virtual ~TcpServerHandler() override;
 
 public:
@@ -68,7 +68,7 @@ private:
 	// Allocated by this (may be passed by argument).
 	uv_tcp_t* uvHandle{ nullptr };
 	// Others.
-	std::unordered_set<TcpConnectionHandler*> connections;
+	absl::flat_hash_set<TcpConnectionHandler*> connections;
 	bool closed{ false };
 };
 

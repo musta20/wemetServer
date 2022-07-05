@@ -51,22 +51,21 @@ public:
 
 public:
 	void Close();
+	bool IsClosed() const
+	{
+		return this->closed;
+	}
 	virtual void Dump() const;
 	void Setup(
 	  Listener* listener,
 	  struct sockaddr_storage* localAddr,
 	  const std::string& localIp,
 	  uint16_t localPort);
-	bool IsClosed() const
-	{
-		return this->closed;
-	}
 	uv_tcp_t* GetUvHandle() const
 	{
 		return this->uvHandle;
 	}
 	void Start();
-	void Write(const uint8_t* data, size_t len, TcpConnectionHandler::onSendCallback* cb);
 	void Write(
 	  const uint8_t* data1,
 	  size_t len1,
