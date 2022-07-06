@@ -11,7 +11,7 @@ let parser = require("body-parser");
 const path = require("path");
 const PORT = process.env.PORT;
 let mediasoup = require("mediasoup");
-
+//require("./media-soup-cli")
 const mediaSoupEventHandler = require("./src/eventHandler/mediaSoupEvent");
 const roomEventEventHandler = require("./src/eventHandler/roomEvent");
 var io = require("socket.io")(http, {
@@ -103,8 +103,19 @@ const createRoom = async (roomName, socketId) => {
 worker = createWorker();
 
 //set the event handler on client connection
-io.on("connection", (socket) => {
-  const { removeItems } = mediaSoupHelper({
+io.on("connection", async (socket) => {
+  TheRoomHelper = new RoomHelper(socket);
+
+  const {
+    addTransport,
+    getTransport,
+    createWebRtcTransport,
+    removeItems,
+    addConsumer,
+    addProducer,
+    informViewrs,
+    informConsumers,
+  } = await mediaSoupHelper({
     socket,
     peers,
     transports,
@@ -112,9 +123,8 @@ io.on("connection", (socket) => {
     consumers,
     TheRoomHelper,
   });
-  TheRoomHelper = new RoomHelper(socket);
 
-  roomEventEventHandler({
+  await roomEventEventHandler({
     socket,
     peers,
     TheRoomHelper,
@@ -124,15 +134,23 @@ io.on("connection", (socket) => {
     fs,
   });
 
-  mediaSoupEventHandler({
+  await mediaSoupEventHandler({
     socket,
-    removeItems,
     peers,
+    addTransport,
+    getTransport,
+    createWebRtcTransport,
+    removeItems,
+    addConsumer,
+    addProducer,
+    informViewrs,
+    informConsumers,
     TheRoomHelper,
     transports,
     producers,
     consumers,
     rooms,
+    fs,
   });
 });
 

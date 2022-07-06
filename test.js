@@ -1,19 +1,21 @@
-const adventurer = {
-  name: "Alice",
-  cat: {
-    name: "Dinah",
-  },
-  dog:{
-      name:"vv"
-      ,rufn:()=>{
-        console.log('runf runf runf')
+
+let pps =[{name:"nnn"},{name:"cc"},{name:"xxx"},{name:"nnn"},{name:"nnn"}]
+
+
+testimo = (pps)=>{
+   // pps=[...pps,{name:"nnn"}]
+ //   pps.filter(item=>item.name !=="nnn")
+   //  pps.pop()
+   let useIndex = pps.findIndex(item => item.name === "nnn" )
+console.log(useIndex)
+console.log(pps.filter(item=>item.name !=="nnn"))
+
+  // pps.splice(1, 1); 
+
     }
-  }
+    
+    
 
-};
+testimo(pps)
 
-// const dogName = adventurer.dog?.name;
-// expected output: undefined
-//console.log(adventurer.dog.rufn?.())
-//adventurer.someNonExistentMethod?.();
-// expected output: undefined
+//console.log(pps)
