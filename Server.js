@@ -4,7 +4,8 @@ require("dotenv").config();
 const { RoomHelper } = require("./src/lib/roomHelper");
 const mediaSoupHelper = require("./src/lib/mediaSoupHelper");
 const app = express();
-const http = require("http").Server(app);
+const Http = require("http")
+//.Server(app);
 const fs = require("fs");
 const path = require("path");
 const PORT = process.env.WEMET_SERVER_PORT;
@@ -34,6 +35,17 @@ let consumers = []; // [ { socketId1, roomName1, consumer, }, ... ]
 mediasoup use mediasoup to create worker
 */
 
+
+const privateKey = fs.readFileSync('/etc/letsencrypt/live/wemet.live/privkey.pem', 'utf8');
+const certificate = fs.readFileSync('/etc/letsencrypt/live/wemet.live/cert.pem', 'utf8');
+const ca = fs.readFileSync('/etc/letsencrypt/live/wemet.live/chain.pem', 'utf8');
+
+const credentials = {
+	key: privateKey,
+	cert: certificate,
+	ca: ca
+};
+const http = Http.createServer(credentials,app);
 const createWorker = async () => {
   worker = await mediasoup.createWorker();
 
@@ -65,9 +77,6 @@ const mediaCodecs = [
   },
 ];
 
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
-app.get("/", express.static(path.join(__dirname, "build")));
 
 /* const options = {
   key: fs.readFileSync("src/ssl/key.pem", "utf-8"),
@@ -157,6 +166,10 @@ io.on("connection", async (socket) => {
   });
 });
 
+
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+
 app.get("/imges/:name", function (req, res) {
   let filename = path.join(__dirname, "src/uploads/", req.params.name);
   let loadingRoom = path.join(__dirname, "src/uploads/", "loadingRoom.png");
@@ -167,12 +180,10 @@ app.get("/imges/:name", function (req, res) {
     console.error(err);
   }
 });
+app.get("/*", express.static(path.join(__dirname, "build")));
 
-app.use(express.static(path.join(__dirname, "build")));
 
-app.get("/", function (req, res) {
-  res.sendFile(path.join(__dirname, "build", "index.html"));
-});
+
 
 http.listen(PORT, () => {
   console.log("\x1b[33m%s\x1b[0m", `NODEJS SERVER RUNNING ON PORT:${PORT}`);
