@@ -22,6 +22,16 @@ const roomEventEventHandler = require("./src/eventHandler/roomEvent");
   },
 }); */
 
+const privateKey = fs.readFileSync('/etc/letsencrypt/live/wemet.live/privkey.pem', 'utf8');
+const certificate = fs.readFileSync('/etc/letsencrypt/live/wemet.live/cert.pem', 'utf8');
+const ca = fs.readFileSync('/etc/letsencrypt/live/wemet.live/chain.pem', 'utf8');
+
+const credentials = {
+	key: privateKey,
+	cert: certificate,
+	ca: ca
+};
+const http = Http.createServer(credentials,app);
 const io = require("socket.io")(http)
 
 let worker;
@@ -36,16 +46,7 @@ mediasoup use mediasoup to create worker
 */
 
 
-const privateKey = fs.readFileSync('/etc/letsencrypt/live/wemet.live/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('/etc/letsencrypt/live/wemet.live/cert.pem', 'utf8');
-const ca = fs.readFileSync('/etc/letsencrypt/live/wemet.live/chain.pem', 'utf8');
 
-const credentials = {
-	key: privateKey,
-	cert: certificate,
-	ca: ca
-};
-const http = Http.createServer(credentials,app);
 const createWorker = async () => {
   worker = await mediasoup.createWorker();
 
