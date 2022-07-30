@@ -21,13 +21,7 @@ const roomEventEventHandler = require("./src/eventHandler/roomEvent");
   },
 }); */
 
-const io = require("socket.io")(http,{
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
-    credentials: true,
-  }
-})
+const io = require("socket.io")(http)
 
 let worker;
 let rooms = {}; // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
