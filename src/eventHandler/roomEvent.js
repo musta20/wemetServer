@@ -23,7 +23,7 @@ module.exports = ({
   };
 
   socket.on("leave", (name) => {
-    console.log("\x1b[31m%s\x1b[0m", `closeing closing`);
+  //  console.log("\x1b[31m%s\x1b[0m", `closeing closing`);
 
     const Userproduser = producers.find(
       (producer) => producer.socketId === socket.id
@@ -80,14 +80,14 @@ module.exports = ({
       !peers[socket.id].peerDetails.IsPublic;
     //  }
 
-    console.log("IsPublic");
+   // console.log("IsPublic");
 
     fun({ status: true, room: "his gone" });
   });
 
   //this check if the room Exist
   socket.on("IsRommeExist", (room, fun) => {
-    console.log("IsRommeExist");
+   // console.log("IsRommeExist");
     if (!TheRoomHelper.IsRommeExist(TheRoomHelper.GetRoomName(room), socket)) {
       fun({ status: true, room: room });
       return;
@@ -101,7 +101,7 @@ module.exports = ({
 
   //this event used to lock or unlock the room by the admin
   socket.on("LockTheRoom", (room, fun) => {
-    console.log("LockTheRoom");
+   // console.log("LockTheRoom");
 
     if (!peers[socket.id].peerDetails.isAdmin) {
       fun({ status: false, room: "you are not the admin" });
@@ -143,7 +143,7 @@ module.exports = ({
       '"}';
 
     const router1 = await createRoom(title, socket.id);
-    console.log("CREATE STARTING STREAM ");
+  //  console.log("CREATE STARTING STREAM ");
 
     peers[socket.id] = {
       socket,
@@ -196,11 +196,11 @@ module.exports = ({
       '","TraficRoom":"' +
       FullRomeName.TraficRoom +
       '"}';
-    console.log("JOINING THE ROOM");
+/*     console.log("JOINING THE ROOM");
     console.log(FullRomeName);
     console.log("ALL THE ROOMS NAMES");
 
-    console.log(socket.adapter.rooms);
+    console.log(socket.adapter.rooms); */
     socket.join(FullRomeName);
 
     const router1 = await createRoom(roomName, socket.id);
@@ -314,7 +314,7 @@ module.exports = ({
     let roomName = roomProps.title;
 
     var valid = ajv.validate(schema, { name: roomName });
-    console.log(roomName);
+   // console.log(roomName);
     if (!valid) {
       if (
         ajv.errors[0].message == 'should match pattern "^[a-zA-Z0-9]{4,10}$"'
@@ -356,7 +356,7 @@ module.exports = ({
     var base64Data = img.replace(/^data:image\/png;base64,/, "");
 
     var imgname = TheRoomHelper.GetRoomsIamIn(socket) + ".png";
-    console.log("SAVING IMGE " + imgname);
+   // console.log("SAVING IMGE " + imgname);
 
     fs.writeFile("src/uploads/" + imgname, base64Data, "base64", (err) => {
       if (err) throw err;

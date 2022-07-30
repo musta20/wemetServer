@@ -13,7 +13,7 @@ const mediaSoupHelper = ({
   and the room name 
   */
   informConsumers = (roomName, socketId, id) => {
-    console.log(`just joined, id ${id} ${roomName}, ${socketId}`);
+   // console.log(`just joined, id ${id} ${roomName}, ${socketId}`);
 
     let room = TheRoomHelper.GetTheStringFullRoomName(roomName);
 
@@ -62,7 +62,7 @@ const mediaSoupHelper = ({
     if (!items.length) return;
     items.forEach((item, Index) => {
       if (item.socketId === socketId) {
-        console.log("\x1b[33m%s\x1b[0m", `CLOSING THE ${type}`);
+      //  console.log("\x1b[33m%s\x1b[0m", `CLOSING THE ${type}`);
     
         item[type].close();
         items.splice(Index, 1);
@@ -93,7 +93,7 @@ const mediaSoupHelper = ({
           webRtcTransport_options
         );
 
-        console.log(`transport id: ${transport.id}`);
+     //   console.log(`transport id: ${transport.id}`);
 
         transport.on("dtlsstatechange", (dtlsState) => {
           if (dtlsState === "closed") {
@@ -102,7 +102,7 @@ const mediaSoupHelper = ({
         });
 
         transport.on("close", () => {
-          console.log("\x1b[31m%s\x1b[0m", `transport closed}`);
+        //  console.log("\x1b[31m%s\x1b[0m", `transport closed}`);
         });
 
         resolve(transport);
@@ -122,8 +122,8 @@ const mediaSoupHelper = ({
 
   //this function addTransport save transport to the Transport array
   addTransport = (transport, roomName, consumer) => {
-    console.log("AA TRANSPORT");
-    console.log(transports.length);
+/*     console.log("AA TRANSPORT");
+    console.log(transports.length); */
     transports.push({ socketId: socket.id, transport, roomName, consumer }),
       /*     transports = [
       ...transports,
@@ -135,7 +135,7 @@ const mediaSoupHelper = ({
         transports: [...peers[socket.id].transports, transport.id],
       });
 
-    console.log(transports.length);
+   // console.log(transports.length);
   };
 
   return {

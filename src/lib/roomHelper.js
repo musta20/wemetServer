@@ -219,7 +219,7 @@ let retunFullRomeName;
     const roomStr = [...socket.rooms][1];
 
     ////console.log("DISPLAYING THE ROOM STR");
-    console.log(roomStr);
+   // console.log(roomStr);
     if (roomStr === "mainrrom") return roomStr;
     if(!this.isJsonString(roomStr)) return "";
     const obj = JSON.parse(roomStr);

@@ -24,9 +24,9 @@ module.exports = ({
    removeItems(transports, socket.id, "transport");
 
     let TheroomName = peers[socket.id]?.roomName;
-    console.log("\x1b[33m%s\x1b[0m", `Show the ROOM IAM GETTING OUT OF`);
+   // console.log("\x1b[33m%s\x1b[0m", `Show the ROOM IAM GETTING OUT OF`);
 
-    console.log(TheroomName);
+    //console.log(TheroomName);
 
     if (!TheroomName) return;
 
@@ -73,9 +73,9 @@ module.exports = ({
         if (FullRomeName === "undefined") return;
 
         let clients = TheRoomHelper.GetAllUsersInRoom(TheRoomHelper.GetTheStringFullRoomName(FullRomeName.title));
-        console.log('THIS IS PEERDETAILS IS ADMIN')
+/*         console.log('THIS IS PEERDETAILS IS ADMIN')
         console.log(FullRomeName)
-        console.log(clients)
+        console.log(clients) */
 
         if (!clients) return;
         const [first] = clients;
@@ -92,7 +92,7 @@ module.exports = ({
           peers[first].peerDetails.isStream =
             peers[socket.id].peerDetails.isStream;
 
-          console.log("admin switched");
+        //  console.log("admin switched");
 
           socket.to(first).emit("switchAdminSetting", {
             isRoomLocked: peers[socket.id].peerDetails.isRoomLocked,
@@ -169,11 +169,11 @@ module.exports = ({
 
           consumer.on("transportclose", () => {
 
-            console.log("\x1b[31m%s\x1b[0m", `transportclose`);
+          //  console.log("\x1b[31m%s\x1b[0m", `transportclose`);
           });
 
           consumer.on("producerclose", () => {
-            console.log("\x1b[31m%s\x1b[0m", `producer of consumer closed`);
+//            console.log("\x1b[31m%s\x1b[0m", `producer of consumer closed`);
 
             socket.emit("producer-closed", {
               remoteProducerId: remoteProducerId,
@@ -255,7 +255,7 @@ module.exports = ({
         ];
       }
     });
-    console.log("\x1b[31m%s\x1b[0m", `ALL THE PRODUCERS YOU ASK FOR`);
+   // console.log("\x1b[31m%s\x1b[0m", `ALL THE PRODUCERS YOU ASK FOR`);
     //  console.log(producerList);
 
     // return the producer list back to the client

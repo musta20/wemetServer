@@ -9,17 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const PORT = process.env.WEMET_SERVER_PORT;
 const mediasoup = require("mediasoup");
-const mediaSoupCli = require("mediasoup-cli");
 
-mediaSoupCli.observer(mediasoup)
-/*
- const mediaSoupCli = require("mediasoup-cli");
-
-mediaSoupCli.observer(mediasoup)
-
-require("mediasoup-cli").observer(mediasoup,{
-  PORT:"4568"
-})  */ 
 
 const mediaSoupEventHandler = require("./src/eventHandler/mediaSoupEvent");
 const roomEventEventHandler = require("./src/eventHandler/roomEvent");
