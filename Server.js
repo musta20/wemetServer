@@ -1,26 +1,43 @@
 let express = require("express");
 
 require("dotenv").config();
-
 const { RoomHelper } = require("./src/lib/roomHelper");
 const mediaSoupHelper = require("./src/lib/mediaSoupHelper");
-let app = express();
-let http = require("http").Server(app);
+const app = express();
+const http = require("http").Server(app);
 const fs = require("fs");
-let parser = require("body-parser");
 const path = require("path");
-const PORT = process.env.PORT;
-let mediasoup = require("mediasoup");
-//require("./media-soup-cli")
+const PORT = process.env.WEMET_SERVER_PORT;
+const mediasoup = require("mediasoup");
+const mediaSoupCli = require("mediasoup-cli");
+
+mediaSoupCli.observer(mediasoup)
+/*
+ const mediaSoupCli = require("mediasoup-cli");
+
+mediaSoupCli.observer(mediasoup)
+
+require("mediasoup-cli").observer(mediasoup,{
+  PORT:"4568"
+})  */ 
+
 const mediaSoupEventHandler = require("./src/eventHandler/mediaSoupEvent");
 const roomEventEventHandler = require("./src/eventHandler/roomEvent");
-var io = require("socket.io")(http, {
+/* const io = require("socket.io")(http, {
   cors: {
     origin: "http://localhost:3000",
     methods: ["GET", "POST"],
     credentials: true,
   },
-});
+}); */
+
+const io = require("socket.io")(http,{
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true,
+  }
+})
 
 let worker;
 let rooms = {}; // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
@@ -32,6 +49,7 @@ let consumers = []; // [ { socketId1, roomName1, consumer, }, ... ]
 /*
 mediasoup use mediasoup to create worker
 */
+
 const createWorker = async () => {
   worker = await mediasoup.createWorker();
 
@@ -63,14 +81,14 @@ const mediaCodecs = [
   },
 ];
 
-app.use(parser.urlencoded({ extended: false }));
-app.use(parser.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 app.get("/", express.static(path.join(__dirname, "build")));
 
-const options = {
+/* const options = {
   key: fs.readFileSync("src/ssl/key.pem", "utf-8"),
   cert: fs.readFileSync("src/ssl/cert.pem", "utf-8"),
-};
+}; */
 
 let TheRoomHelper;
 
@@ -101,6 +119,7 @@ const createRoom = async (roomName, socketId) => {
 };
 
 worker = createWorker();
+//mediacli()
 
 //set the event handler on client connection
 io.on("connection", async (socket) => {
@@ -174,3 +193,4 @@ app.get("/", function (req, res) {
 http.listen(PORT, () => {
   console.log("\x1b[33m%s\x1b[0m", `NODEJS SERVER RUNNING ON PORT:${PORT}`);
 });
+

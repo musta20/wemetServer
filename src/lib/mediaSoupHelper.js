@@ -63,9 +63,10 @@ const mediaSoupHelper = ({
     items.forEach((item, Index) => {
       if (item.socketId === socketId) {
         console.log("\x1b[33m%s\x1b[0m", `CLOSING THE ${type}`);
-
+    
         item[type].close();
         items.splice(Index, 1);
+
       }
     });
   };

@@ -1,64 +1,67 @@
+let Ajv = require("ajv");
 
-  let Ajv = require("ajv");
-
-  
-module.exports =({socket,peers ,TheRoomHelper,producers,createRoom,rooms , fs})=>{
-    let ajv = new Ajv();
-    //the schema used to valdait the input
-    const schema = {
-      properties: {
-        name: {
-          type: "string",
-          minLength: 5,
-          maxLength: 8,
-          pattern: "^[a-zA-Z0-9]{4,10}$",
-        },
+module.exports = ({
+  socket,
+  peers,
+  TheRoomHelper,
+  producers,
+  createRoom,
+  rooms,
+  fs,
+}) => {
+  let ajv = new Ajv();
+  //the schema used to valdait the input
+  const schema = {
+    properties: {
+      name: {
+        type: "string",
+        minLength: 5,
+        maxLength: 8,
+        pattern: "^[a-zA-Z0-9]{4,10}$",
       },
-    };
+    },
+  };
 
-
-   socket.on("leave", (name) => {
+  socket.on("leave", (name) => {
     console.log("\x1b[31m%s\x1b[0m", `closeing closing`);
-    
-        
-        const Userproduser = producers.find(
-          (producer) => producer.socketId === socket.id
-        );
-        if (Userproduser) Userproduser.producer.close();
-        let TheRoomLeav = TheRoomHelper.LeavAllRooms(socket);
-  
-      });
-    
-      //this event used to HiddeTheRoom or un Hidde Th eRoom  by the admin
-    socket.on("HiddeTheRoom", (room, fun) => {
-    
-        if (!peers[socket.id].peerDetails.isAdmin) {
-          fun({ status: false, room: "you are not the admin" });
-          return;
-        }
-    
+
+    const Userproduser = producers.find(
+      (producer) => producer.socketId === socket.id
+    );
+    if (Userproduser) Userproduser.producer.close();
+    let TheRoomLeav = TheRoomHelper.LeavAllRooms(socket);
+  });
+
+  //this event used to HiddeTheRoom or un Hidde Th eRoom  by the admin
+  socket.on("HiddeTheRoom", (room, fun) => {
+    if (!peers[socket.id].peerDetails.isAdmin) {
+      fun({ status: false, room: "you are not the admin" });
+      return;
+    }
+
     /*     if (!peers[socket.id].peerDetails.IsPublic) {
           peers[socket.id].peerDetails.IsPublic = true;
           fun({ status: true, room: "room is locked" });
           return;
         } */
-    
-        peers[socket.id].peerDetails.IsPublic = !peers[socket.id].peerDetails.IsPublic;
-        fun({ status: true, room: "room is unlocked" });
-      });
 
-        //chanche the value of isstream buy the room
+    peers[socket.id].peerDetails.IsPublic =
+      !peers[socket.id].peerDetails.IsPublic;
+    fun({ status: true, room: "room is unlocked" });
+  });
+
+  //chanche the value of isstream buy the room
   socket.on("isStream", (set, fun) => {
-
     if (!peers[socket.id].peerDetails.isAdmin) {
       fun({ status: false, room: "your not admin" });
       return;
     }
 
- /*    if (peers[socket.id].peerDetails.isStream) {
+    /*    if (peers[socket.id].peerDetails.isStream) {
       peers[socket.id].peerDetails.isStream = false;
     } else { */
-      peers[socket.id].peerDetails.isStream = !peers[socket.id].peerDetails.isStream;
+    peers[socket.id].peerDetails.isStream =
+      !peers[socket.id].peerDetails.isStream;
     //}
 
     fun({ status: true, room: "his gone" });
@@ -70,13 +73,14 @@ module.exports =({socket,peers ,TheRoomHelper,producers,createRoom,rooms , fs})=
       fun({ status: false, room: "your not admin" });
       return;
     }
-   /*  if (peers[socket.id].peerDetails.IsPublic) {
+    /*  if (peers[socket.id].peerDetails.IsPublic) {
       peers[socket.id].peerDetails.IsPublic = false;
     } else { */
-      peers[socket.id].peerDetails.IsPublic = !peers[socket.id].peerDetails.IsPublic;
-  //  }
+    peers[socket.id].peerDetails.IsPublic =
+      !peers[socket.id].peerDetails.IsPublic;
+    //  }
 
-    console.log("IsPublic")
+    console.log("IsPublic");
 
     fun({ status: true, room: "his gone" });
   });
@@ -97,98 +101,91 @@ module.exports =({socket,peers ,TheRoomHelper,producers,createRoom,rooms , fs})=
 
   //this event used to lock or unlock the room by the admin
   socket.on("LockTheRoom", (room, fun) => {
-    console.log("LockTheRoom")
+    console.log("LockTheRoom");
 
     if (!peers[socket.id].peerDetails.isAdmin) {
       fun({ status: false, room: "you are not the admin" });
       return;
     }
 
-/*     if (!peers[socket.id].peerDetails.isRoomLocked) {
+    /*     if (!peers[socket.id].peerDetails.isRoomLocked) {
       peers[socket.id].peerDetails.isRoomLocked = true;
       fun({ status: true, room: "room is locked" });
       return;
     } */
-   // console.log(!peers[socket.id].peerDetails.isRoomLocked)
-  //  console.log(peers[socket.id].peerDetails.isRoomLocked)
-    peers[socket.id].peerDetails.isRoomLocked = !peers[socket.id].peerDetails.isRoomLocked;
+    // console.log(!peers[socket.id].peerDetails.isRoomLocked)
+    //  console.log(peers[socket.id].peerDetails.isRoomLocked)
+    peers[socket.id].peerDetails.isRoomLocked =
+      !peers[socket.id].peerDetails.isRoomLocked;
     fun({ status: true, room: "room is unlocked" });
   });
 
   //this event ban user from the room by the admin
   socket.on("kik", (isocketId, fun) => {
-      if (!peers[socket.id].peerDetails.isAdmin) {
-        fun({ status: false, room: "your not admin" });
-        return;
-      }
-      socket.to(isocketId).emit("GoOut");
-  
-      fun({ status: true, room: "his gone" });
+    if (!peers[socket.id].peerDetails.isAdmin) {
+      fun({ status: false, room: "your not admin" });
+      return;
+    }
+    socket.to(isocketId).emit("GoOut");
+
+    fun({ status: true, room: "his gone" });
   });
 
-  const createRoomForFristTime = async ({title , IsPublic},fun) =>{
+  const createRoomForFristTime = async ({ title, IsPublic }, fun) => {
+    TheRoomHelper.LeavAllRooms(socket);
+    FullRomeName =
+      '{"title":"' +
+      title +
+      '","BossId":"' +
+      socket.id +
+      '","TraficRoom":"' +
+      TheRoomHelper.GenerateRoomeTrafic(socket.id) +
+      '"}';
 
+    const router1 = await createRoom(title, socket.id);
+    console.log("CREATE STARTING STREAM ");
+
+    peers[socket.id] = {
+      socket,
+      roomName: title,
+      transports: [],
+      producers: [],
+      consumers: [],
+      peerDetails: {
+        name: "",
+        isAdmin: true,
+        isRoomLocked: false,
+        isStream: true,
+        IsPublic: IsPublic,
+      },
+    };
+
+    const rtpCapabilities = router1.rtpCapabilities;
+
+    socket.join(FullRomeName);
+    socket.to("mainrrom").emit("AddRoom", { title });
     
-TheRoomHelper.LeavAllRooms(socket);
-        FullRomeName =
-          '{"title":"' +
-          title +
-          '","BossId":"' +
-          socket.id +
-          '","TraficRoom":"' +
-          TheRoomHelper.GenerateRoomeTrafic(socket.id) +
-          '"}';
-  
-        const router1 = await createRoom(title, socket.id);
-        console.log("CREATE STARTING STREAM ");
+    fun({
+      status: true,
+      room: title,
+      First: true,
+      BossId: socket.id,
+      rtpCapabilities: rtpCapabilities,
+    });
+    return;
+  };
 
-        peers[socket.id] = {
-          socket,
-          roomName:title, 
-          transports: [],
-          producers: [],
-          consumers: [],
-          peerDetails: {
-            name: "",
-            isAdmin: true,
-            isRoomLocked: false,
-            isStream: true,
-            IsPublic: IsPublic,
-          },
-        };
-        
-  
-        const rtpCapabilities = router1.rtpCapabilities;
-
-        socket.join(FullRomeName);
-        socket.to("mainrrom").emit("AddRoom", { title });
-
-        fun({
-          status: true,
-          room: title,
-          First: true,
-          UserId: socket.id,
-          rtpCapabilities: rtpCapabilities,
-        });
-        return;
-      
-  
-  }
-
-  const joinExistRoom = async(roomName,fun)=>{
-
+  const joinExistRoom = async (roomName, fun) => {
     UserId = TheRoomHelper.GenerateUserId(socket.id);
     FullRomeName = TheRoomHelper.GetTheFullRoomName(roomName);
 
     let admin = TheRoomHelper.GetRoomBossId(roomName, rooms, peers);
 
     if (admin.peerDetails.isRoomLocked) {
-     // fun({ status: false, room: "the room " + roomName + " is locked " });
-     watchTheStream(roomName,fun)
+      // fun({ status: false, room: "the room " + roomName + " is locked " });
+      watchTheStream(roomName, fun);
       return;
     }
-
-
 
     let BossId = FullRomeName.BossId;
     FullRomeName =
@@ -230,11 +227,9 @@ TheRoomHelper.LeavAllRooms(socket);
       room: roomName,
       rtpCapabilities: rtpCapabilities,
     });
+  };
 
-  }
-
-  const watchTheStream = async (roomName,fun)=>{
-
+  const watchTheStream = async (roomName, fun) => {
     UserId = TheRoomHelper.GenerateUserId(socket.id);
 
     FullRomeName = TheRoomHelper.GetTheFullRoomName(roomName);
@@ -248,7 +243,9 @@ TheRoomHelper.LeavAllRooms(socket);
         fun({
           status: false,
           room:
-            "the room " + TheRoomHelper.GetRoomName(roomName) + " is not Streamed ",
+            "the room " +
+            TheRoomHelper.GetRoomName(roomName) +
+            " is not Streamed ",
         });
         return;
       }
@@ -256,14 +253,12 @@ TheRoomHelper.LeavAllRooms(socket);
       console.error(e);
     }
 
-
     TraficRoom = FullRomeName.TraficRoom;
-    
+
     socket.join(TraficRoom);
-    
 
     let clients = TheRoomHelper.GetAllUsersInRoom(TraficRoom);
-    
+
     const router1 = await createRoom(TraficRoom, socket.id);
 
     peers[socket.id] = {
@@ -286,7 +281,6 @@ TheRoomHelper.LeavAllRooms(socket);
 
       producers.forEach(async (producerData) => {
         if (producerData.roomName === FullRomeName.title) {
- 
           try {
             await router1.pipeToRouter({
               producerId: producerData.producer.id,
@@ -305,7 +299,7 @@ TheRoomHelper.LeavAllRooms(socket);
       rtpCapabilities: rtpCapabilities,
       room: "the room " + TraficRoom + " is watching  ",
     });
-  }
+  };
 
   /*
   this the frist event user call when intering the room
@@ -315,7 +309,7 @@ TheRoomHelper.LeavAllRooms(socket);
   4-if the room not setreamed will not join and just send you to hom page
   5-if the room is locked it will not allow user to join and the user becam just viewr
   */
-  
+
   socket.on("CreateStream", async (roomProps, fun) => {
     let roomName = roomProps.title;
 
@@ -340,9 +334,8 @@ TheRoomHelper.LeavAllRooms(socket);
     }
 
     if (!TheRoomHelper.IsRommeExist(roomName, socket)) {
-   return createRoomForFristTime(roomProps,fun)
+      return createRoomForFristTime(roomProps, fun);
     }
-
 
     if (
       TheRoomHelper.IsRommeExist(roomName, socket) &&
@@ -351,13 +344,11 @@ TheRoomHelper.LeavAllRooms(socket);
         TheRoomHelper.GetTheStringFullRoomName(roomName)
       )
     ) {
-
-        joinExistRoom(roomName,fun)
+      joinExistRoom(roomName, fun);
       return;
     }
 
-
-watchTheStream(roomName,fun)
+    watchTheStream(roomName, fun);
   });
 
   //this event save the imge sent by the user as thumnal for live room
@@ -375,7 +366,7 @@ watchTheStream(roomName,fun)
   //the event display current live room and add or remove at real time
   socket.on("getroom", (room, fun) => {
     let rroommss = TheRoomHelper.GetRoomsNames(peers);
-  //  console.log("SHOWING THE ROOMS IN LIST:");
+    //  console.log("SHOWING THE ROOMS IN LIST:");
     // console.log(rroommss);
 
     socket.join("mainrrom");
@@ -388,7 +379,7 @@ watchTheStream(roomName,fun)
     //console.log('PrivetMessage')
     //console.log(id)
 
-    socket.to(id.id).emit("PrivetMessage", {Message:id.Message});
+    socket.to(id.id).emit("PrivetMessage", { Message: id.Message });
     fun({ status: true, room: "message sent" });
   });
 
@@ -415,5 +406,4 @@ watchTheStream(roomName,fun)
       Message,
     });
   });
-
-}
+};

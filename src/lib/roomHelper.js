@@ -135,10 +135,12 @@ class RoomHelper {
   //this function extract the room info and build the room name
   GetTheStringFullRoomName(TheroomName) {
 
-    FullRomeName = this.GetTheFullRoomName(TheroomName);
-
+   let FullRomeName = this.GetTheFullRoomName(TheroomName);
+ 
+let retunFullRomeName;
     if (FullRomeName !== null) {
-      FullRomeName =
+
+      retunFullRomeName =
         '{"title":"' +
         FullRomeName.title +
         '","BossId":"' +
@@ -148,7 +150,7 @@ class RoomHelper {
         '"}';
     }
 
-    return FullRomeName;
+    return retunFullRomeName;
   }
 
   //get the room admin id

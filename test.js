@@ -1,21 +1,11 @@
+const peer={hassan:{name:"f"},nna:{name:"fff"},dsd:{name:"ref"}}
 
-let pps =[{name:"nnn"},{name:"cc"},{name:"xxx"},{name:"nnn"},{name:"nnn"}]
+const changename = (peer)=>{
+    peer.splice(0,1)
+}
 
+console.log(peer)
 
-testimo = (pps)=>{
-   // pps=[...pps,{name:"nnn"}]
- //   pps.filter(item=>item.name !=="nnn")
-   //  pps.pop()
-   let useIndex = pps.findIndex(item => item.name === "nnn" )
-console.log(useIndex)
-console.log(pps.filter(item=>item.name !=="nnn"))
+changename(peer)
 
-  // pps.splice(1, 1); 
-
-    }
-    
-    
-
-testimo(pps)
-
-//console.log(pps)
+console.log(peer)

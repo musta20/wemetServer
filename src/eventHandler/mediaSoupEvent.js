@@ -16,17 +16,11 @@ module.exports = ({
   rooms,
   fs
 }) => {
-  
+
   //when the user disconnected this event whill close all producer /consumer
   socket.on("disconnect", () => {
-    console.log("SHOW THA TRANSPORTATAT")
-    console.log(transports.length)
-
-    //consumers = 
-    removeItems(consumers, socket.id, "consumer");
-   // producers = 
+   removeItems(consumers, socket.id, "consumer");
    removeItems(producers, socket.id, "producer");
-   // transports = 
    removeItems(transports, socket.id, "transport");
 
     let TheroomName = peers[socket.id]?.roomName;
@@ -38,6 +32,7 @@ module.exports = ({
 
     if (!TheRoomHelper.IsRommeExist(TheroomName, socket)) {
       if (TheroomName !== "mainrrom" && !TheroomName.includes("@")) {
+        rooms?.[TheroomName]?.router?.close()
         socket.to("mainrrom").emit("DelteRoom", { TheroomName });
 
         fs.unlink("src/uploads/" + TheroomName + ".png", (err) => {
@@ -49,13 +44,18 @@ module.exports = ({
           //file removed
         });
       }
+
+      if (TheroomName !== "mainrrom" && TheroomName.includes("@")) {
+        rooms?.[TheroomName]?.router?.close()
+
+      }
+      
       // return;
     }
 
-    console.log("\x1b[32m%s\x1b[0m", `show the GetTheFullRoomName`);
+   // console.log("\x1b[32m%s\x1b[0m", `show the GetTheFullRoomName`);
 
     FullRomeName = TheRoomHelper.GetTheFullRoomName(TheroomName);
-    console.log(FullRomeName);
 
     if (FullRomeName) {
       FullstringRomeName =
@@ -72,7 +72,10 @@ module.exports = ({
       if (FullRomeName !== null) {
         if (FullRomeName === "undefined") return;
 
-        let clients = TheRoomHelper.GetAllUsersInRoom(FullRomeName);
+        let clients = TheRoomHelper.GetAllUsersInRoom(TheRoomHelper.GetTheStringFullRoomName(FullRomeName.title));
+        console.log('THIS IS PEERDETAILS IS ADMIN')
+        console.log(FullRomeName)
+        console.log(clients)
 
         if (!clients) return;
         const [first] = clients;
@@ -112,7 +115,7 @@ module.exports = ({
     const { roomName } = peers[socket.id];
 
     delete peers[socket.id];
-
+ // peers.splice(socket.id,1)
     try {
       rooms[roomName] = {
         router: rooms[roomName].router,
@@ -132,34 +135,32 @@ module.exports = ({
       { rtpCapabilities, remoteProducerId, serverConsumerTransportId },
       callback
     ) => {
-      console.log(transports.length)
+
 
       try {
         const { roomName } = peers[socket.id];
         const usocketId = producers.find(
           (producerdata) => producerdata.producer.id == remoteProducerId
         );
-        console.log("the CONSUMING CORIDANIL ");
-        console.log(transports.length)
-        console.log(peers.length)
-        console.log(rooms.length)
-        //  console.log(roomName )
-        //console.log(rtpCapabilities, remoteProducerId, serverConsumerTransportId )
+
 
         const router = rooms[roomName].router;
+
+
         let consumerTransport = transports.find(
           (transportData) =>
             transportData.consumer &&
             transportData.transport.id == serverConsumerTransportId
-        ).transport;
-        // check if the router can consume the specified producer
+        )?.transport;
+
+
         if (
           router.canConsume({
             producerId: remoteProducerId,
             rtpCapabilities,
           })
         ) {
-          // transport can now consume and return a consumer
+     
           const consumer = await consumerTransport.consume({
             producerId: remoteProducerId,
             rtpCapabilities,
@@ -167,29 +168,31 @@ module.exports = ({
           });
 
           consumer.on("transportclose", () => {
-            //console.log('transport close from consumer')
+
             console.log("\x1b[31m%s\x1b[0m", `transportclose`);
           });
 
           consumer.on("producerclose", () => {
             console.log("\x1b[31m%s\x1b[0m", `producer of consumer closed`);
 
-            //  console.log(usocketId.socketId);
             socket.emit("producer-closed", {
               remoteProducerId: remoteProducerId,
               socketId: usocketId.socketId,
             });
 
-            consumerTransport.close([]);
-            transports = transports.filter(
+           // consumerTransport.close();
+          
+          //  let transportsIndex=transports.findIndex(t=>t.transport.id === consumerTransport.id)
+           // transports.splice(transportsIndex,1)
+          /*   transports = transports.filter(
               (transportData) =>
                 transportData.transport.id !== consumerTransport.id
-            );
+            ); */
 
-            consumer.close();
-            consumers = consumers.filter(
+          //  consumer.close();
+      /*       consumers = consumers.filter(
               (consumerData) => consumerData.consumer.id !== consumer.id
-            );
+            ); */
           });
 
           addConsumer(consumer, roomName);
@@ -263,6 +266,7 @@ module.exports = ({
   socket.on("createWebRtcTransport", async ({ consumer }, callback) => {
     // get Room Name from Peer's properties
     //console.log(peers[socket.id])
+    
     const roomName = peers[socket.id].roomName;
 
     // get Router (Room) object this peer is in based on RoomName
