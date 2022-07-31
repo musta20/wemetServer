@@ -87,7 +87,7 @@ module.exports = ({
 
   //this check if the room Exist
   socket.on("IsRommeExist", (room, fun) => {
-   // console.log("IsRommeExist");
+
     if (!TheRoomHelper.IsRommeExist(TheRoomHelper.GetRoomName(room), socket)) {
       fun({ status: true, room: room });
       return;

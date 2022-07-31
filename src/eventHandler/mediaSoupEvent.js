@@ -70,9 +70,10 @@ module.exports = ({
 
     if (peers[socket.id]?.peerDetails?.isAdmin) {
       if (FullRomeName !== null) {
-        if (!FullRomeName.title) return;
 
-        let clients = TheRoomHelper.GetAllUsersInRoom(TheRoomHelper.GetTheStringFullRoomName(FullRomeName.title));
+        if (!FullRomeName?.title) return;
+
+        let clients = TheRoomHelper.GetAllUsersInRoom(TheRoomHelper.GetTheStringFullRoomName(FullRomeName?.title));
 
 
         if (!clients) return;

@@ -5,6 +5,7 @@ const { RoomHelper } = require("./src/lib/roomHelper");
 const mediaSoupHelper = require("./src/lib/mediaSoupHelper");
 const app = express();
 const Http = require("httpolyglot")
+//const Http = require("http")
 const fs = require("fs");
 const path = require("path");
 const PORT = process.env.WEMET_SERVER_PORT;
@@ -20,17 +21,17 @@ const roomEventEventHandler = require("./src/eventHandler/roomEvent");
   },
 }); */
 
- const privateKey = fs.readFileSync(path.join(__dirname,'ssl/privkey.pem'), 'utf8');
+const privateKey = fs.readFileSync(path.join(__dirname,'ssl/privkey.pem'), 'utf8');
 const certificate = fs.readFileSync(path.join(__dirname,'ssl/cert.pem'), 'utf8');
-    const ca = fs.readFileSync(path.join(__dirname,'ssl/cert.pem'), 'utf8');
+const ca = fs.readFileSync(path.join(__dirname,'ssl/cert.pem'), 'utf8');
 
 const credentials = {
 	key: privateKey,
 	cert: certificate,
 	ca: ca
 }; 
-//const http = Http.createServer(credentials,app);
 const http = Http.createServer(credentials,app);
+//const http = Http.createServer(app);
 const io = require("socket.io")(http)
 
 let worker;
@@ -167,7 +168,7 @@ app.get("/imges/:name", function (req, res) {
     console.error(err);
   }
 });
-app.get("/*", express.static(path.join(__dirname, "build")));
+app.get("/", express.static(path.join(__dirname, "build")));
 
 
 
