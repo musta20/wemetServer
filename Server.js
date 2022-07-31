@@ -4,13 +4,11 @@ require("dotenv").config();
 const { RoomHelper } = require("./src/lib/roomHelper");
 const mediaSoupHelper = require("./src/lib/mediaSoupHelper");
 const app = express();
-const Http = require("http")
-//.Server(app);
+const Http = require("httpolyglot")
 const fs = require("fs");
 const path = require("path");
 const PORT = process.env.WEMET_SERVER_PORT;
 const mediasoup = require("mediasoup");
-
 
 const mediaSoupEventHandler = require("./src/eventHandler/mediaSoupEvent");
 const roomEventEventHandler = require("./src/eventHandler/roomEvent");
@@ -22,15 +20,16 @@ const roomEventEventHandler = require("./src/eventHandler/roomEvent");
   },
 }); */
 
-const privateKey = fs.readFileSync('/etc/letsencrypt/live/wemet.live/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('/etc/letsencrypt/live/wemet.live/cert.pem', 'utf8');
-const ca = fs.readFileSync('/etc/letsencrypt/live/wemet.live/chain.pem', 'utf8');
+ const privateKey = fs.readFileSync(path.join(__dirname,'ssl/privkey.pem'), 'utf8');
+const certificate = fs.readFileSync(path.join(__dirname,'ssl/cert.pem'), 'utf8');
+    const ca = fs.readFileSync(path.join(__dirname,'ssl/cert.pem'), 'utf8');
 
 const credentials = {
 	key: privateKey,
 	cert: certificate,
 	ca: ca
-};
+}; 
+//const http = Http.createServer(credentials,app);
 const http = Http.createServer(credentials,app);
 const io = require("socket.io")(http)
 
@@ -44,9 +43,6 @@ let consumers = []; // [ { socketId1, roomName1, consumer, }, ... ]
 /*
 mediasoup use mediasoup to create worker
 */
-
-
-
 const createWorker = async () => {
   worker = await mediasoup.createWorker();
 
@@ -79,21 +75,12 @@ const mediaCodecs = [
 ];
 
 
-/* const options = {
-  key: fs.readFileSync("src/ssl/key.pem", "utf-8"),
-  cert: fs.readFileSync("src/ssl/cert.pem", "utf-8"),
-}; */
+
 
 let TheRoomHelper;
 
 const createRoom = async (roomName, socketId) => {
-  /*
-   worker.createRouter(options)
-   options = { mediaCodecs, appData }
-   mediaCodecs -> defined above
-   appData -> custom application data - we are not supplying any
-   none of the two are required
-  */
+
 
   let router1;
   let peers = [];
@@ -113,9 +100,8 @@ const createRoom = async (roomName, socketId) => {
 };
 
 worker = createWorker();
-//mediacli()
 
-//set the event handler on client connection
+
 io.on("connection", async (socket) => {
   TheRoomHelper = new RoomHelper(socket);
 

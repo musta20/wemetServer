@@ -70,12 +70,10 @@ module.exports = ({
 
     if (peers[socket.id]?.peerDetails?.isAdmin) {
       if (FullRomeName !== null) {
-        if (FullRomeName === "undefined") return;
+        if (!FullRomeName.title) return;
 
         let clients = TheRoomHelper.GetAllUsersInRoom(TheRoomHelper.GetTheStringFullRoomName(FullRomeName.title));
-/*         console.log('THIS IS PEERDETAILS IS ADMIN')
-        console.log(FullRomeName)
-        console.log(clients) */
+
 
         if (!clients) return;
         const [first] = clients;

@@ -353,14 +353,16 @@ module.exports = ({
 
   //this event save the imge sent by the user as thumnal for live room
   socket.on("saveimg", (img, fun) => {
-    var base64Data = img.replace(/^data:image\/png;base64,/, "");
+    let base64Data = img.replace(/^data:image\/png;base64,/, "");
 
-    var imgname = TheRoomHelper.GetRoomsIamIn(socket) + ".png";
-   // console.log("SAVING IMGE " + imgname);
+    let imgname = TheRoomHelper.GetRoomsIamIn(socket) + ".png";
+    console.log("SAVING IMGE " + imgname);
 
     fs.writeFile("src/uploads/" + imgname, base64Data, "base64", (err) => {
       if (err) throw err;
     });
+
+
   });
 
   //the event display current live room and add or remove at real time
