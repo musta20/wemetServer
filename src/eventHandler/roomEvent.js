@@ -353,7 +353,6 @@ module.exports = ({
 
   //this event save the imge sent by the user as thumnal for live room
   socket.on("saveimg", async (img, fun) => {
-    console.log("SAVING IMGE ");
 
     let base64Data = img.replace(/^data:image\/png;base64,/, "");
 
