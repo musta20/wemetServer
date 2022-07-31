@@ -352,15 +352,18 @@ module.exports = ({
   });
 
   //this event save the imge sent by the user as thumnal for live room
-  socket.on("saveimg", (img, fun) => {
+  socket.on("saveimg", async (img, fun) => {
+    console.log("SAVING IMGE ");
+
     let base64Data = img.replace(/^data:image\/png;base64,/, "");
 
     let imgname = TheRoomHelper.GetRoomsIamIn(socket) + ".png";
-    console.log("SAVING IMGE " + imgname);
 
-    fs.writeFile("src/uploads/" + imgname, base64Data, "base64", (err) => {
+     await fs.writeFile("src/uploads/" + imgname, base64Data, "base64", (err) => {
       if (err) throw err;
     });
+
+    fun(imgname)
 
 
   });
