@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const mediaSoupHelper = ({
   socket,
   peers,
@@ -79,8 +81,8 @@ const mediaSoupHelper = ({
         const webRtcTransport_options = {
           listenIps: [
             {
-              ip: "0.0.0.0", // replace with relevant IP address
-              announcedIp: "127.0.0.1",
+              ip: process.env.PUBLIC_LISTEN_IPS, // replace with relevant IP address
+              announcedIp: process.env.ANNOUNCED_PUBLIC_IP,
             },
           ],
           enableUdp: true,

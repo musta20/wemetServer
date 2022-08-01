@@ -188,7 +188,12 @@ app.get("/imges/:name", function (req, res) {
   }
 });
 
-app.get("/", express.static(path.join(__dirname, "build")));
+
+app.use(express.static(path.join(__dirname, "build")));
+
+app.use((req, res, next) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
 
 http.listen(PORT, () => {
   console.log("\x1b[33m%s\x1b[0m", `NODEJS SERVER RUNNING ON PORT:${PORT}`);
