@@ -1,38 +1,64 @@
-let express = require("express");
-
 require("dotenv").config();
+
+const __prod__ = require("./constants");
+
+const express = require("express");
+
 const { RoomHelper } = require("./src/lib/roomHelper");
+
 const mediaSoupHelper = require("./src/lib/mediaSoupHelper");
+
 const app = express();
-const Http = require("httpolyglot")
-//const Http = require("http")
+
+const Http = __prod__ ? require("httpolyglot") : require("http");
+
 const fs = require("fs");
+
 const path = require("path");
+
 const PORT = process.env.WEMET_SERVER_PORT;
+
 const mediasoup = require("mediasoup");
 
 const mediaSoupEventHandler = require("./src/eventHandler/mediaSoupEvent");
+
 const roomEventEventHandler = require("./src/eventHandler/roomEvent");
-/* const io = require("socket.io")(http, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
-}); */
 
-const privateKey = fs.readFileSync(path.join(__dirname,'ssl/privkey.pem'), 'utf8');
-const certificate = fs.readFileSync(path.join(__dirname,'ssl/cert.pem'), 'utf8');
-const ca = fs.readFileSync(path.join(__dirname,'ssl/cert.pem'), 'utf8');
+let credentials = {};
 
-const credentials = {
-	key: privateKey,
-	cert: certificate,
-	ca: ca
-}; 
-const http = Http.createServer(credentials,app);
-//const http = Http.createServer(app);
-const io = require("socket.io")(http)
+let cors = {
+  cors :{
+  origin: "http://localhost:3000",
+  methods: ["GET", "POST"],
+  credentials: true,
+}
+};
+
+if (__prod__) {
+  const privateKey = fs.readFileSync(
+    path.join(__dirname, "ssl/privkey.pem"),
+    "utf8"
+  );
+  const certificate = fs.readFileSync(
+    path.join(__dirname, "ssl/cert.pem"),
+    "utf8"
+  );
+  const ca = fs.readFileSync(path.join(__dirname, "ssl/cert.pem"), "utf8");
+
+  credentials = {
+    key: privateKey,
+    cert: certificate,
+    ca: ca,
+  };
+
+  cors = {
+  };
+}
+
+
+const http = Http.createServer(credentials, app);
+
+const io = require("socket.io")(http, cors);
 
 let worker;
 let rooms = {}; // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
@@ -75,14 +101,9 @@ const mediaCodecs = [
   },
 ];
 
-
-
-
 let TheRoomHelper;
 
 const createRoom = async (roomName, socketId) => {
-
-
   let router1;
   let peers = [];
   if (rooms[roomName]) {
@@ -101,7 +122,6 @@ const createRoom = async (roomName, socketId) => {
 };
 
 worker = createWorker();
-
 
 io.on("connection", async (socket) => {
   TheRoomHelper = new RoomHelper(socket);
@@ -154,7 +174,6 @@ io.on("connection", async (socket) => {
   });
 });
 
-
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
@@ -168,12 +187,9 @@ app.get("/imges/:name", function (req, res) {
     console.error(err);
   }
 });
+
 app.get("/", express.static(path.join(__dirname, "build")));
-
-
-
 
 http.listen(PORT, () => {
   console.log("\x1b[33m%s\x1b[0m", `NODEJS SERVER RUNNING ON PORT:${PORT}`);
 });
-

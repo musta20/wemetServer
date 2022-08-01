@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "nodemon Server.js"
+    "start": "nodemon Server.js",
+    "start Dev": "NODE_ENV=production nodemon Server.js"
   },
   "dependencies": {
     "@testing-library/jest-dom": "^5.15.1",
