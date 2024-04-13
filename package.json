@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node Server.js",
-    "startDev": "NODE_ENV=production nodemon Server.js"
+    "startProd": "NODE_ENV=production nodemon Server.js",
+    "dev": "NODE_ENV=development nodemon Server.js"
   },
   "dependencies": {
     "@testing-library/jest-dom": "^5.15.1",
@@ -16,6 +17,7 @@
     "express": "^4.17.1",
     "httpolyglot": "^0.1.2",
     "mediasoup": "^3.9.2",
+    "mediasoup-cli": "^1.0.1",
     "multer": "^1.4.2",
     "nodemon": "^2.0.15",
     "object-hash": "^2.0.3",

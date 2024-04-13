@@ -8,6 +8,10 @@ const { RoomHelper } = require("./src/lib/roomHelper");
 
 const mediaSoupHelper = require("./src/lib/mediaSoupHelper");
 
+const mediaSoupCli = require("mediasoup-cli");
+
+const https = require('https');
+
 const app = express();
 
 const Http = __prod__ ? require("httpolyglot") : require("http");
@@ -16,15 +20,17 @@ const fs = require("fs");
 
 const path = require("path");
 
-const PORT = process.env.WEMET_SERVER_PORT;
+const PORT = process.env.WEMET_SERVER_PORT || 6800;
 
 const mediasoup = require("mediasoup");
 
 const mediaSoupEventHandler = require("./src/eventHandler/mediaSoupEvent");
 
 const roomEventEventHandler = require("./src/eventHandler/roomEvent");
+mediaSoupCli.observer(mediasoup);
 
 let credentials = {};
+
 
 let cors = {
   cors :{
@@ -175,17 +181,26 @@ io.on("connection", async (socket) => {
 });
 
 app.use(express.urlencoded({ extended: false }));
+
 app.use(express.json());
 
 app.get("/imges/:name", function (req, res) {
+
   let filename = path.join(__dirname, "src/uploads/", req.params.name);
   let loadingRoom = path.join(__dirname, "src/uploads/", "loadingRoom.png");
+  
   try {
+  
     if (fs.existsSync(filename)) return res.sendFile(filename);
+
     return res.sendFile(loadingRoom);
+  
   } catch (err) {
+  
     console.error(err);
+  
   }
+
 });
 
 
@@ -195,6 +210,18 @@ app.use((req, res, next) => {
   res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
+
 http.listen(PORT, () => {
   console.log("\x1b[33m%s\x1b[0m", `NODEJS SERVER RUNNING ON PORT:${PORT}`);
 });
+
+async function startHttpServer() {
+
+  return new Promise((resolve, reject) => {
+    http.listen(PORT, () => {
+      console.log("\x1b[33m%s\x1b[0m", `HTTP SERVER RUNNING ON PORT:${PORT}`);
+      resolve();
+    });
+  });
+
+}
