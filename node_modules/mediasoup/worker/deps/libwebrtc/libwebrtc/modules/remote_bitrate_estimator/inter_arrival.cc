@@ -38,9 +38,25 @@ bool InterArrival::ComputeDeltas(uint32_t timestamp,
                                  uint32_t* timestamp_delta, // send_delta.
                                  int64_t* arrival_time_delta_ms, // recv_delta.
                                  int* packet_size_delta) {
-  MS_ASSERT(timestamp_delta != nullptr, "timestamp_delta is null");
-  MS_ASSERT(arrival_time_delta_ms != nullptr, "arrival_time_delta_ms is null");
-  MS_ASSERT(packet_size_delta != nullptr, "packet_size_delta is null");
+  if (timestamp_delta == nullptr) {
+    MS_ERROR("timestamp_delta is null");
+    return false;
+  }
+  if (arrival_time_delta_ms == nullptr) {
+    MS_ERROR("arrival_time_delta_ms is null");
+    return false;
+  }
+  if (packet_size_delta == nullptr) {
+    MS_ERROR("packet_size_delta is null");
+    return false;
+  }
+
+  // Ignore packets with invalid arrival time.
+  if (arrival_time_ms < 0) {
+    MS_WARN_TAG(bwe, "invalid arrival time %" PRIi64, arrival_time_ms);
+
+    return false;
+  }
   bool calculated_deltas = false;
   if (current_timestamp_group_.IsFirstPacket()) {
     // We don't have enough data to update the filter, so we store it until we
@@ -48,7 +64,7 @@ bool InterArrival::ComputeDeltas(uint32_t timestamp,
     current_timestamp_group_.timestamp = timestamp;
     current_timestamp_group_.first_timestamp = timestamp;
     current_timestamp_group_.first_arrival_ms = arrival_time_ms;
-  } else if (!PacketInOrder(timestamp, arrival_time_ms)) {
+  } else if (!PacketInOrder(timestamp)) {
     return false;
   } else if (NewTimestampGroup(arrival_time_ms, timestamp)) {
     // First packet of a later frame, the previous frame sample is ready.
@@ -89,7 +105,11 @@ bool InterArrival::ComputeDeltas(uint32_t timestamp,
         num_consecutive_reordered_packets_ = 0;
       }
 
-      MS_ASSERT(*arrival_time_delta_ms >= 0, "arrival_time_delta_ms is < 0");
+      if (*arrival_time_delta_ms < 0) {
+        MS_ERROR("arrival_time_delta_ms is < 0");
+
+        return false;
+      }
 
       *packet_size_delta = static_cast<int>(current_timestamp_group_.size) -
                            static_cast<int>(prev_timestamp_group_.size);
@@ -115,17 +135,9 @@ bool InterArrival::ComputeDeltas(uint32_t timestamp,
   return calculated_deltas;
 }
 
-bool InterArrival::PacketInOrder(uint32_t timestamp, int64_t arrival_time_ms) {
+bool InterArrival::PacketInOrder(uint32_t timestamp) {
   if (current_timestamp_group_.IsFirstPacket()) {
     return true;
-  } else if (arrival_time_ms < 0) {
-    // NOTE: Change related to https://github.com/versatica/mediasoup/issues/357
-    //
-    // Sometimes we do get negative arrival time, which causes BelongsToBurst()
-    // to fail, which may cause anything that uses InterArrival to crash.
-    //
-    // Credits to @sspanak and @Ivaka.
-    return false;
   } else {
     // Assume that a diff which is bigger than half the timestamp interval
     // (32 bits) must be due to reordering. This code is almost identical to
@@ -164,10 +176,12 @@ bool InterArrival::BelongsToBurst(int64_t arrival_time_ms,
     return false;
   }
 
-  MS_ASSERT(
-    current_timestamp_group_.complete_time_ms >= 0,
-    "current_timestamp_group_.complete_time_ms < 0 [current_timestamp_group_.complete_time_ms:%" PRIi64 "]",
-    current_timestamp_group_.complete_time_ms);
+  if (current_timestamp_group_.complete_time_ms < 0) {
+    MS_ERROR("current_timestamp_group_.complete_time_ms < 0 [current_timestamp_group_.complete_time_ms:%" PRIi64 "]",
+      current_timestamp_group_.complete_time_ms);
+
+    return false;
+  }
 
   int64_t arrival_time_delta_ms =
       arrival_time_ms - current_timestamp_group_.complete_time_ms;

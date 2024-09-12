@@ -28,19 +28,22 @@ namespace RTC
 		MS_TRACE();
 	}
 
-	void RtxStream::FillJson(json& jsonObject) const
+	flatbuffers::Offset<FBS::RtxStream::RtxDump> RtxStream::FillBuffer(
+	  flatbuffers::FlatBufferBuilder& builder) const
 	{
 		MS_TRACE();
 
 		// Add params.
-		this->params.FillJson(jsonObject["params"]);
+		auto params = this->params.FillBuffer(builder);
+
+		return FBS::RtxStream::CreateRtxDump(builder, params);
 	}
 
 	bool RtxStream::ReceivePacket(RTC::RtpPacket* packet)
 	{
 		MS_TRACE();
 
-		uint16_t seq = packet->GetSequenceNumber();
+		const uint16_t seq = packet->GetSequenceNumber();
 
 		// If this is the first packet seen, initialize stuff.
 		if (!this->started)
@@ -86,31 +89,39 @@ namespace RTC
 
 		report->SetSsrc(GetSsrc());
 
-		uint32_t prevPacketsLost = this->packetsLost;
+		const uint32_t prevPacketsLost = this->packetsLost;
 
 		// Calculate Packets Expected and Lost.
 		auto expected = GetExpectedPackets();
 
 		if (expected > this->packetsCount)
+		{
 			this->packetsLost = expected - this->packetsCount;
+		}
 		else
+		{
 			this->packetsLost = 0u;
+		}
 
 		// Calculate Fraction Lost.
-		uint32_t expectedInterval = expected - this->expectedPrior;
+		const uint32_t expectedInterval = expected - this->expectedPrior;
 
 		this->expectedPrior = expected;
 
-		uint32_t receivedInterval = this->packetsCount - this->receivedPrior;
+		const uint32_t receivedInterval = this->packetsCount - this->receivedPrior;
 
 		this->receivedPrior = this->packetsCount;
 
-		int32_t lostInterval = expectedInterval - receivedInterval;
+		const int32_t lostInterval = expectedInterval - receivedInterval;
 
 		if (expectedInterval == 0 || lostInterval <= 0)
+		{
 			this->fractionLost = 0;
+		}
 		else
+		{
 			this->fractionLost = std::round((static_cast<double>(lostInterval << 8) / expectedInterval));
+		}
 
 		this->reportedPacketLost += (this->packetsLost - prevPacketsLost);
 
@@ -126,7 +137,7 @@ namespace RTC
 		if (this->lastSrReceived != 0)
 		{
 			// Get delay in milliseconds.
-			auto delayMs = static_cast<uint32_t>(DepLibUV::GetTimeMs() - this->lastSrReceived);
+			const uint32_t delayMs = DepLibUV::GetTimeMs() - this->lastSrReceived;
 			// Express delay in units of 1/65536 seconds.
 			uint32_t dlsr = (delayMs / 1000) << 16;
 
@@ -157,8 +168,8 @@ namespace RTC
 	{
 		MS_TRACE();
 
-		uint16_t seq    = packet->GetSequenceNumber();
-		uint16_t udelta = seq - this->maxSeq;
+		const uint16_t seq    = packet->GetSequenceNumber();
+		const uint16_t udelta = seq - this->maxSeq;
 
 		// If the new packet sequence number is greater than the max seen but not
 		// "so much bigger", accept it.
@@ -231,18 +242,18 @@ namespace RTC
 		this->badSeq  = RtpSeqMod + 1; // So seq == badSeq is false.
 	}
 
-	void RtxStream::Params::FillJson(json& jsonObject) const
+	flatbuffers::Offset<FBS::RtxStream::Params> RtxStream::Params::FillBuffer(
+	  flatbuffers::FlatBufferBuilder& builder) const
 	{
 		MS_TRACE();
 
-		jsonObject["ssrc"]        = this->ssrc;
-		jsonObject["payloadType"] = this->payloadType;
-		jsonObject["mimeType"]    = this->mimeType.ToString();
-		jsonObject["clockRate"]   = this->clockRate;
-
-		if (!this->rrid.empty())
-			jsonObject["rrid"] = this->rrid;
-
-		jsonObject["cname"] = this->cname;
+		return FBS::RtxStream::CreateParamsDirect(
+		  builder,
+		  this->ssrc,
+		  this->payloadType,
+		  this->mimeType.ToString().c_str(),
+		  this->clockRate,
+		  this->rrid.c_str(),
+		  this->cname.c_str());
 	}
 } // namespace RTC

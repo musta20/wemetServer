@@ -71,11 +71,15 @@ namespace RTC
 
 				// Possitive value.
 				if (((value >> 23) & 1) == 0)
+				{
 					return value;
+				}
 
 				// Negative value.
 				if (value != 0x0800000)
+				{
 					value &= ~(1 << 23);
+				}
 
 				return -value;
 			}
@@ -102,9 +106,9 @@ namespace RTC
 			{
 				return uint32_t{ ntohl(this->header->jitter) };
 			}
-			void SetJitter(uint32_t jitter)
+			void SetJitter(float jitter)
 			{
-				this->header->jitter = uint32_t{ htonl(jitter) };
+				this->header->jitter = uint32_t{ htonl(static_cast<uint32_t>(jitter)) };
 			}
 			uint32_t GetLastSenderReport() const
 			{
@@ -131,6 +135,8 @@ namespace RTC
 		class ReceiverReportPacket : public Packet
 		{
 		public:
+			static size_t MaxReportsPerPacket;
+
 			using Iterator = std::vector<ReceiverReport*>::iterator;
 
 		public:
@@ -163,6 +169,15 @@ namespace RTC
 			{
 				this->reports.push_back(report);
 			}
+			void RemoveReport(ReceiverReport* report)
+			{
+				auto it = std::find(this->reports.begin(), this->reports.end(), report);
+
+				if (it != this->reports.end())
+				{
+					this->reports.erase(it);
+				}
+			}
 			Iterator Begin()
 			{
 				return this->reports.begin();
@@ -190,12 +205,12 @@ namespace RTC
 			}
 			size_t GetSize() const override
 			{
-				size_t size = Packet::CommonHeaderSize + 4u /* this->ssrc */;
-
-				for (auto* report : reports)
-				{
-					size += report->GetSize();
-				}
+				// A serialized packet can contain a maximum of 31 reports.
+				// If number of reports exceeds 31 then the required number of packets
+				// will be serialized which will take the size calculated below.
+				size_t size = (Packet::CommonHeaderSize + 4u /* this->ssrc */) *
+				              ((this->GetCount() / MaxReportsPerPacket) + 1);
+				size += ReceiverReport::HeaderSize * this->GetCount();
 
 				return size;
 			}

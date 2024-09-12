@@ -77,7 +77,9 @@ let consumers = []; // [ { socketId1, roomName1, consumer, }, ... ]
 mediasoup use mediasoup to create worker
 */
 const createWorker = async () => {
-  worker = await mediasoup.createWorker();
+  worker = await mediasoup.createWorker({
+ //   TransportPortRange: [1000, 4000],
+  });
 
   console.log("\x1b[36m%s\x1b[0m", `WORKER START PID:${worker.pid}`);
 
@@ -130,25 +132,10 @@ const createRoom = async (roomName, socketId) => {
 worker = createWorker();
 
 io.on("connection", async (socket) => {
+
   TheRoomHelper = new RoomHelper(socket);
 
-  const {
-    addTransport,
-    getTransport,
-    createWebRtcTransport,
-    removeItems,
-    addConsumer,
-    addProducer,
-    informViewrs,
-    informConsumers,
-  } = await mediaSoupHelper({
-    socket,
-    peers,
-    transports,
-    producers,
-    consumers,
-    TheRoomHelper,
-  });
+ 
 
   await roomEventEventHandler({
     socket,
@@ -163,14 +150,6 @@ io.on("connection", async (socket) => {
   await mediaSoupEventHandler({
     socket,
     peers,
-    addTransport,
-    getTransport,
-    createWebRtcTransport,
-    removeItems,
-    addConsumer,
-    addProducer,
-    informViewrs,
-    informConsumers,
     TheRoomHelper,
     transports,
     producers,
@@ -179,6 +158,18 @@ io.on("connection", async (socket) => {
     fs,
   });
 });
+
+
+
+
+
+
+
+
+
+
+
+
 
 app.use(express.urlencoded({ extended: false }));
 

@@ -1,11 +1,13 @@
 [wrap-file]
-directory = libuv-v1.44.1
-source_url = https://dist.libuv.org/dist/v1.44.1/libuv-v1.44.1.tar.gz
-source_filename = libuv-v1.44.1.tar.gz
-source_hash = 9d37b63430fe3b92a9386b949bebd8f0b4784a39a16964c82c9566247a76f64a
-patch_filename = libuv_1.44.1-1_patch.zip
-patch_url = https://wrapdb.mesonbuild.com/v2/libuv_1.44.1-1/get_patch
-patch_hash = 8a105158cdabca2a54f1c7cc4c2f814c159271e10dc5e37ed1a08f13cfd67ff7
+directory = libuv-v1.48.0
+source_url = https://dist.libuv.org/dist/v1.48.0/libuv-v1.48.0.tar.gz
+source_filename = libuv-v1.48.0.tar.gz
+source_hash = 7f1db8ac368d89d1baf163bac1ea5fe5120697a73910c8ae6b2fffb3551d59fb
+patch_filename = libuv_1.48.0-1_patch.zip
+patch_url = https://wrapdb.mesonbuild.com/v2/libuv_1.48.0-1/get_patch
+patch_hash = 27b18917c914a5d6dfb459073710e9bfb6b2962d69d4e0bad5bc7b1173482be7
+source_fallback_url = https://github.com/mesonbuild/wrapdb/releases/download/libuv_1.48.0-1/libuv-v1.48.0.tar.gz
+wrapdb_version = 1.48.0-1
 
 [provide]
 libuv = libuv_dep

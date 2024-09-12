@@ -1,14 +1,11 @@
-module.exports = ({
+const mediaSoupHelper = require("../lib/mediaSoupHelper");
+
+
+
+
+module.exports = async ({
   socket,
   peers,
-  addTransport,
-  getTransport,
-  createWebRtcTransport,
-  removeItems,
-  addConsumer,
-  addProducer,
-  informViewrs,
-  informConsumers,
   TheRoomHelper,
   transports,
   producers,
@@ -16,6 +13,25 @@ module.exports = ({
   rooms,
   fs
 }) => {
+
+
+  const {
+    addTransport,
+    getTransport,
+    createWebRtcTransport,
+    removeItems,
+    addConsumer,
+    addProducer,
+    informViewrs,
+    informConsumers,
+  } = await mediaSoupHelper({
+    socket,
+    peers,
+    transports,
+    producers,
+    consumers,
+    TheRoomHelper,
+  });
 
   //when the user disconnected this event whill close all producer /consumer
   socket.on("disconnect", () => {

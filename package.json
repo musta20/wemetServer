@@ -3,9 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+<<<<<<< Updated upstream
     "start": "node Server.js",
     "startProd": "NODE_ENV=production nodemon Server.js",
     "dev": "NODE_ENV=development nodemon Server.js"
+=======
+    "start": "nodemon Server.js",
+    "startDev": "NODE_ENV=production nodemon Server.js"
+
+>>>>>>> Stashed changes
   },
   "dependencies": {
     "@testing-library/jest-dom": "^5.15.1",
@@ -16,8 +22,12 @@
     "dotenv": "^16.0.1",
     "express": "^4.17.1",
     "httpolyglot": "^0.1.2",
+<<<<<<< Updated upstream
     "mediasoup": "^3.9.2",
     "mediasoup-cli": "^1.0.1",
+=======
+    "mediasoup": "^3.14.14",
+>>>>>>> Stashed changes
     "multer": "^1.4.2",
     "nodemon": "^2.0.15",
     "object-hash": "^2.0.3",

@@ -3,7 +3,7 @@
 
 #include "RTC/RTCP/SenderReport.hpp"
 #include "Logger.hpp"
-#include <cstring>
+#include <cstring> // std::memcpy
 
 namespace RTC
 {
@@ -36,12 +36,12 @@ namespace RTC
 			MS_TRACE();
 
 			MS_DUMP("<SenderReport>");
-			MS_DUMP("  ssrc         : %" PRIu32, GetSsrc());
-			MS_DUMP("  ntp sec      : %" PRIu32, GetNtpSec());
-			MS_DUMP("  ntp frac     : %" PRIu32, GetNtpFrac());
-			MS_DUMP("  rtp ts       : %" PRIu32, GetRtpTs());
-			MS_DUMP("  packet count : %" PRIu32, GetPacketCount());
-			MS_DUMP("  octet count  : %" PRIu32, GetOctetCount());
+			MS_DUMP("  ssrc: %" PRIu32, GetSsrc());
+			MS_DUMP("  ntp sec: %" PRIu32, GetNtpSec());
+			MS_DUMP("  ntp frac: %" PRIu32, GetNtpFrac());
+			MS_DUMP("  rtp ts: %" PRIu32, GetRtpTs());
+			MS_DUMP("  packet count: %" PRIu32, GetPacketCount());
+			MS_DUMP("  octet count: %" PRIu32, GetOctetCount());
 			MS_DUMP("</SenderReport>");
 		}
 
@@ -65,12 +65,14 @@ namespace RTC
 			auto* header = const_cast<CommonHeader*>(reinterpret_cast<const CommonHeader*>(data));
 
 			std::unique_ptr<SenderReportPacket> packet(new SenderReportPacket(header));
-			size_t offset = Packet::CommonHeaderSize;
+			const size_t offset = Packet::CommonHeaderSize;
 
 			SenderReport* report = SenderReport::Parse(data + offset, len - offset);
 
 			if (report)
+			{
 				packet->AddReport(report);
+			}
 
 			return packet.release();
 		}
@@ -81,14 +83,26 @@ namespace RTC
 		{
 			MS_TRACE();
 
-			MS_ASSERT(this->reports.size() == 1, "invalid number of sender reports");
+			size_t offset{ 0 };
+			uint8_t* header = { nullptr };
 
-			size_t offset = Packet::Serialize(buffer);
-
-			// Serialize reports.
+			// Serialize packets (common header + 1 report) each.
 			for (auto* report : this->reports)
 			{
+				// Reference current common header.
+				header = buffer + offset;
+
+				offset += Packet::Serialize(buffer + offset);
 				offset += report->Serialize(buffer + offset);
+
+				// Adjust the header count field.
+				reinterpret_cast<Packet::CommonHeader*>(header)->count = 0;
+
+				// Adjust the header length field.
+				size_t length = Packet::CommonHeaderSize;
+				length += SenderReport::HeaderSize;
+
+				reinterpret_cast<Packet::CommonHeader*>(header)->length = uint16_t{ htons((length / 4) - 1) };
 			}
 
 			return offset;

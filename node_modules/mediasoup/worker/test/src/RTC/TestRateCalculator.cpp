@@ -1,7 +1,7 @@
 #include "common.hpp"
 #include "DepLibUV.hpp"
 #include "RTC/RateCalculator.hpp"
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <vector>
 
 using namespace RTC;
@@ -15,11 +15,10 @@ struct data
 
 void validate(RateCalculator& rate, uint64_t timeBase, std::vector<data>& input)
 {
-	for (auto it = input.begin(); it != input.end(); ++it)
+	for (auto& item : input)
 	{
-		auto& item = *it;
-
 		rate.Update(item.size, timeBase + item.offset);
+
 		REQUIRE(rate.GetRate(timeBase + item.offset) == item.rate);
 	}
 }

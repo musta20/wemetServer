@@ -38,9 +38,13 @@ namespace Utils
 		olen = len * 4 / 3 + 4; // 3-byte blocks to 4-byte.
 
 		if (olen < len)
+		{
 			MS_THROW_TYPE_ERROR("integer overflow");
+		}
 		else if (olen > BufferOutSize - 1)
+		{
 			MS_THROW_TYPE_ERROR("data too big");
+		}
 
 		end = data + len;
 		in  = data;
@@ -73,14 +77,14 @@ namespace Utils
 			*pos++ = '=';
 		}
 
-		return std::string(reinterpret_cast<const char*>(out), pos - out);
+		return { reinterpret_cast<const char*>(out), static_cast<size_t>(pos - out) };
 	}
 
 	std::string Utils::String::Base64Encode(const std::string& str)
 	{
 		MS_TRACE();
 
-		auto* data = reinterpret_cast<const uint8_t*>(str.c_str());
+		const auto* data = reinterpret_cast<const uint8_t*>(str.c_str());
 
 		return Base64Encode(data, str.size());
 	}
@@ -100,7 +104,9 @@ namespace Utils
 
 		// NOTE: This is not really accurate but anyway.
 		if (len > BufferOutSize - 1)
+		{
 			MS_THROW_TYPE_ERROR("data too big");
+		}
 
 		std::memset(dtable, 0x80, 256);
 
@@ -114,11 +120,15 @@ namespace Utils
 		for (i = 0; i < len; ++i)
 		{
 			if (dtable[data[i]] != 0x80)
+			{
 				count++;
+			}
 		}
 
 		if (count == 0 || count % 4)
+		{
 			MS_THROW_TYPE_ERROR("invalid data");
+		}
 
 		pos   = out;
 		count = 0;
@@ -128,10 +138,14 @@ namespace Utils
 			tmp = dtable[data[i]];
 
 			if (tmp == 0x80)
+			{
 				continue;
+			}
 
 			if (data[i] == '=')
+			{
 				pad++;
+			}
 
 			block[count] = tmp;
 			count++;
@@ -146,11 +160,17 @@ namespace Utils
 				if (pad)
 				{
 					if (pad == 1)
+					{
 						pos--;
+					}
 					else if (pad == 2)
+					{
 						pos -= 2;
+					}
 					else
+					{
 						MS_THROW_TYPE_ERROR("integer padding");
+					}
 
 					break;
 				}
@@ -166,7 +186,7 @@ namespace Utils
 	{
 		MS_TRACE();
 
-		auto* data = reinterpret_cast<const uint8_t*>(str.c_str());
+		const auto* data = reinterpret_cast<const uint8_t*>(str.c_str());
 
 		return Base64Decode(data, str.size(), outLen);
 	}

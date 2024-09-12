@@ -1,6 +1,6 @@
 #include "common.hpp"
 #include "RTC/RTCP/Bye.hpp"
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <cstring> // std::memcmp()
 #include <string>
 
@@ -31,7 +31,7 @@ namespace TestBye
 	{
 		REQUIRE(packet->GetReason() == reason);
 
-		ByePacket::Iterator it = packet->Begin();
+		auto it = packet->Begin();
 
 		REQUIRE(*it == ssrc1);
 
@@ -47,11 +47,11 @@ SCENARIO("RTCP BYE parsing", "[parser][rtcp][bye]")
 {
 	SECTION("parse BYE packet")
 	{
-		ByePacket* packet = ByePacket::Parse(buffer, sizeof(buffer));
+		std::unique_ptr<ByePacket> packet{ ByePacket::Parse(buffer, sizeof(buffer)) };
 
 		REQUIRE(packet);
 
-		verify(packet);
+		verify(packet.get());
 
 		SECTION("serialize packet instance")
 		{
@@ -64,8 +64,6 @@ SCENARIO("RTCP BYE parsing", "[parser][rtcp][bye]")
 				REQUIRE(std::memcmp(buffer, serialized, sizeof(buffer)) == 0);
 			}
 		}
-
-		delete packet;
 	}
 
 	SECTION("create ByePacket")

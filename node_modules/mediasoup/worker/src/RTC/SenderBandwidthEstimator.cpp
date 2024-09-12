@@ -4,7 +4,6 @@
 #include "RTC/SenderBandwidthEstimator.hpp"
 #include "DepLibUV.hpp"
 #include "Logger.hpp"
-#include <limits>
 
 namespace RTC
 {
@@ -47,7 +46,7 @@ namespace RTC
 		this->cummulativeResult.Reset();
 	}
 
-	void SenderBandwidthEstimator::RtpPacketSent(SentInfo& sentInfo)
+	void SenderBandwidthEstimator::RtpPacketSent(const SentInfo& sentInfo)
 	{
 		MS_TRACE();
 
@@ -83,20 +82,24 @@ namespace RTC
 	{
 		MS_TRACE();
 
-		auto nowMs         = DepLibUV::GetTimeMs();
-		uint64_t elapsedMs = nowMs - this->cummulativeResult.GetStartedAtMs();
+		auto nowMs               = DepLibUV::GetTimeMs();
+		const uint64_t elapsedMs = nowMs - this->cummulativeResult.GetStartedAtMs();
 
 		// Drop ongoing cummulative result if too old.
 		if (elapsedMs > 1000u)
+		{
 			this->cummulativeResult.Reset();
+		}
 
 		for (auto& result : feedback->GetPacketResults())
 		{
 			if (!result.received)
+			{
 				continue;
+			}
 
-			uint16_t wideSeq = result.sequenceNumber;
-			auto it          = this->sentInfos.find(wideSeq);
+			const uint16_t wideSeq = result.sequenceNumber;
+			auto it                = this->sentInfos.find(wideSeq);
 
 			if (it == this->sentInfos.end())
 			{
@@ -172,8 +175,8 @@ namespace RTC
 
 		auto previousAvailableBitrate = this->availableBitrate;
 
-		double ratio = static_cast<double>(cummulativeResult.GetReceiveBitrate()) /
-		               static_cast<double>(cummulativeResult.GetSendBitrate());
+		const double ratio = static_cast<double>(cummulativeResult.GetReceiveBitrate()) /
+		                     static_cast<double>(cummulativeResult.GetSendBitrate());
 		auto bitrate =
 		  std::min<uint32_t>(cummulativeResult.GetReceiveBitrate(), cummulativeResult.GetSendBitrate());
 
@@ -238,16 +241,24 @@ namespace RTC
 		else
 		{
 			if (sentAtMs < this->firstPacketSentAtMs)
+			{
 				this->firstPacketSentAtMs = sentAtMs;
+			}
 
 			if (receivedAtMs < this->firstPacketReceivedAtMs)
+			{
 				this->firstPacketReceivedAtMs = receivedAtMs;
+			}
 
 			if (sentAtMs > this->lastPacketSentAtMs)
+			{
 				this->lastPacketSentAtMs = sentAtMs;
+			}
 
 			if (receivedAtMs > this->lastPacketReceivedAtMs)
+			{
 				this->lastPacketReceivedAtMs = receivedAtMs;
+			}
 		}
 
 		this->numPackets++;

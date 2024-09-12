@@ -1,6 +1,6 @@
 #include "common.hpp"
 #include "RTC/RTCP/FeedbackRtpTmmb.hpp"
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <cstring> // std::memcmp()
 
 using namespace RTC::RTCP;
@@ -48,11 +48,12 @@ SCENARIO("RTCP Feeback RTP TMMBR parsing", "[parser][rtcp][feedback-rtp][tmmb]")
 
 	SECTION("parse FeedbackRtpTmmbrPacket")
 	{
-		FeedbackRtpTmmbrPacket* packet = FeedbackRtpTmmbrPacket::Parse(buffer, sizeof(buffer));
+		std::unique_ptr<FeedbackRtpTmmbrPacket> packet{ FeedbackRtpTmmbrPacket::Parse(
+			buffer, sizeof(buffer)) };
 
 		REQUIRE(packet);
 
-		verify(packet);
+		verify(packet.get());
 
 		SECTION("serialize packet instance")
 		{
@@ -64,21 +65,18 @@ SCENARIO("RTCP Feeback RTP TMMBR parsing", "[parser][rtcp][feedback-rtp][tmmb]")
 			// represent the same content.
 			SECTION("create a packet out of the serialized buffer")
 			{
-				FeedbackRtpTmmbrPacket* packet = FeedbackRtpTmmbrPacket::Parse(buffer, sizeof(buffer));
+				std::unique_ptr<FeedbackRtpTmmbrPacket> packet{ FeedbackRtpTmmbrPacket::Parse(
+					buffer, sizeof(buffer)) };
 
-				verify(packet);
-
-				delete packet;
+				verify(packet.get());
 			}
 		}
-
-		delete packet;
 	}
 
 	SECTION("create FeedbackRtpTmmbrPacket")
 	{
 		FeedbackRtpTmmbrPacket packet(senderSsrc, mediaSsrc);
-		FeedbackRtpTmmbrItem* item = new FeedbackRtpTmmbrItem();
+		auto* item = new FeedbackRtpTmmbrItem();
 
 		item->SetSsrc(ssrc);
 		item->SetBitrate(bitrate);

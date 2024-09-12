@@ -195,7 +195,7 @@ NetworkControlUpdate GoogCcNetworkController::OnProcessInterval(
   }
   bandwidth_estimation_->UpdateEstimate(msg.at_time);
   absl::optional<int64_t> start_time_ms =
-      alr_detector_->GetApplicationLimitedRegionStartTime();
+      alr_detector_->GetApplicationLimitedRegionStartTime(msg.at_time.ms());
   probe_controller_->SetAlrStartTimeMs(start_time_ms);
 
   auto probes = probe_controller_->Process(msg.at_time.ms());
@@ -431,7 +431,7 @@ NetworkControlUpdate GoogCcNetworkController::OnTransportPacketsFeedback(
   for (const auto& feedback : feedbacks) {
     TimeDelta feedback_rtt =
         report.feedback_time - feedback.sent_packet.send_time;
-    TimeDelta min_pending_time = feedback.receive_time - max_recv_time;
+    TimeDelta min_pending_time = max_recv_time - feedback.receive_time;
     TimeDelta propagation_rtt = feedback_rtt - min_pending_time;
     max_feedback_rtt = std::max(max_feedback_rtt, feedback_rtt);
     min_propagation_rtt = std::min(min_propagation_rtt, propagation_rtt);

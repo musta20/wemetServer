@@ -10,83 +10,223 @@ namespace RTC
 	{
 		/* Instance methods. */
 
+		size_t CompoundPacket::GetSize()
+		{
+			size_t size{ 0 };
+
+			if (this->senderReportPacket.GetCount() > 0u)
+			{
+				size += this->senderReportPacket.GetSize();
+			}
+
+			if (this->receiverReportPacket.GetCount() > 0u)
+			{
+				size += this->receiverReportPacket.GetSize();
+			}
+
+			if (this->sdesPacket.GetCount() > 0u)
+			{
+				size += this->sdesPacket.GetSize();
+			}
+
+			if (this->xrPacket.Begin() != this->xrPacket.End())
+			{
+				size += this->xrPacket.GetSize();
+			}
+
+			return size;
+		}
+
 		void CompoundPacket::Serialize(uint8_t* data)
 		{
 			MS_TRACE();
 
 			this->header = data;
 
-			// Calculate the total required size for the entire message.
-			if (HasSenderReport())
-			{
-				this->size = this->senderReportPacket.GetSize();
-
-				if (this->receiverReportPacket.GetCount() != 0u)
-				{
-					this->size += ReceiverReport::HeaderSize * this->receiverReportPacket.GetCount();
-				}
-			}
-			// If no sender nor receiver reports are present send an empty Receiver Report
-			// packet as the head of the compound packet.
-			else
-			{
-				this->size = this->receiverReportPacket.GetSize();
-			}
-
-			if (this->sdesPacket.GetCount() != 0u)
-				this->size += this->sdesPacket.GetSize();
-
-			if (this->xrPacket.Begin() != this->xrPacket.End())
-				this->size += this->xrPacket.GetSize();
-
 			// Fill it.
 			size_t offset{ 0 };
 
-			if (HasSenderReport())
+			MS_ASSERT(
+			  this->senderReportPacket.GetCount() > 0u || this->receiverReportPacket.GetCount() > 0u,
+			  "no Sender or Receiver report present");
+
+			if (this->senderReportPacket.GetCount() > 0u)
 			{
-				this->senderReportPacket.Serialize(this->header);
-				offset = this->senderReportPacket.GetSize();
-
-				// Fix header count field.
-				auto* header = reinterpret_cast<Packet::CommonHeader*>(this->header);
-
-				header->count = 0;
-
-				if (this->receiverReportPacket.GetCount() != 0u)
-				{
-					// Fix header length field.
-					size_t length =
-					  ((SenderReport::HeaderSize +
-					    (ReceiverReport::HeaderSize * this->receiverReportPacket.GetCount())) /
-					   4);
-
-					header->length = uint16_t{ htons(length) };
-
-					// Fix header count field.
-					header->count = this->receiverReportPacket.GetCount();
-
-					auto it = this->receiverReportPacket.Begin();
-
-					for (; it != this->receiverReportPacket.End(); ++it)
-					{
-						ReceiverReport* report = (*it);
-
-						report->Serialize(this->header + offset);
-						offset += ReceiverReport::HeaderSize;
-					}
-				}
-			}
-			else
-			{
-				this->receiverReportPacket.Serialize(this->header);
-				offset = this->receiverReportPacket.GetSize();
+				offset += this->senderReportPacket.Serialize(this->header);
 			}
 
-			if (this->sdesPacket.GetCount() != 0u)
+			if (this->receiverReportPacket.GetCount() > 0u)
+			{
+				offset += this->receiverReportPacket.Serialize(this->header + offset);
+			}
+
+			if (this->sdesPacket.GetCount() > 0u)
+			{
 				offset += this->sdesPacket.Serialize(this->header + offset);
+			}
 
 			if (this->xrPacket.Begin() != this->xrPacket.End())
-				this->xrPacket.Serialize(this->header + offset);
+			{
+				offset += this->xrPacket.Serialize(this->header + offset);
+			}
+		}
+
+		bool CompoundPacket::Add(
+		  SenderReport* senderReport,
+		  SdesChunk* sdesChunk,
+		  DelaySinceLastRr::SsrcInfo* delaySinceLastRrSsrcInfo)
+		{
+			// Add the items into the packet.
+
+			if (senderReport)
+			{
+				this->senderReportPacket.AddReport(senderReport);
+			}
+
+			if (sdesChunk)
+			{
+				this->sdesPacket.AddChunk(sdesChunk);
+			}
+
+			if (delaySinceLastRrSsrcInfo)
+			{
+				// Add a DLRR block into the XR packet if no present.
+				if (!this->delaySinceLastRr)
+				{
+					this->delaySinceLastRr = new RTC::RTCP::DelaySinceLastRr();
+					this->xrPacket.AddReport(this->delaySinceLastRr);
+				}
+
+				this->delaySinceLastRr->AddSsrcInfo(delaySinceLastRrSsrcInfo);
+			}
+
+			// New items can hold in the packet, report it.
+			if (GetSize() <= MaxSize)
+			{
+				return true;
+			}
+
+			// New items can not hold in the packet, remove them,
+			// delete and report it.
+
+			if (senderReport)
+			{
+				this->senderReportPacket.RemoveReport(senderReport);
+				delete senderReport;
+			}
+
+			if (sdesChunk)
+			{
+				this->sdesPacket.RemoveChunk(sdesChunk);
+				delete sdesChunk;
+			}
+
+			if (delaySinceLastRrSsrcInfo)
+			{
+				// NOTE: This method deletes the removed instances in place.
+				this->delaySinceLastRr->RemoveLastSsrcInfos(1);
+			}
+
+			return false;
+		}
+
+		bool CompoundPacket::Add(
+		  std::vector<SenderReport*>& senderReports,
+		  std::vector<SdesChunk*>& sdesChunks,
+		  std::vector<DelaySinceLastRr::SsrcInfo*>& delaySinceLastRrSsrcInfos)
+		{
+			// Add the items into the packet.
+
+			for (auto* report : senderReports)
+			{
+				this->senderReportPacket.AddReport(report);
+			}
+
+			for (auto* chunk : sdesChunks)
+			{
+				this->sdesPacket.AddChunk(chunk);
+			}
+
+			// Add a DLRR block into the XR packet if no present.
+			if (!delaySinceLastRrSsrcInfos.empty() && !this->delaySinceLastRr)
+			{
+				this->delaySinceLastRr = new RTC::RTCP::DelaySinceLastRr();
+				this->xrPacket.AddReport(this->delaySinceLastRr);
+			}
+
+			for (auto* ssrcInfo : delaySinceLastRrSsrcInfos)
+			{
+				this->delaySinceLastRr->AddSsrcInfo(ssrcInfo);
+			}
+
+			// New items can hold in the packet, report it.
+			if (GetSize() <= MaxSize)
+			{
+				return true;
+			}
+
+			// New items can not hold in the packet, remove them,
+			// delete and report it.
+
+			for (auto* report : senderReports)
+			{
+				this->senderReportPacket.RemoveReport(report);
+				delete report;
+			}
+
+			for (auto* chunk : sdesChunks)
+			{
+				this->sdesPacket.RemoveChunk(chunk);
+				delete chunk;
+			}
+
+			if (!delaySinceLastRrSsrcInfos.empty())
+			{
+				// NOTE: This method deletes the instances in place.
+				this->delaySinceLastRr->RemoveLastSsrcInfos(delaySinceLastRrSsrcInfos.size());
+			}
+
+			return false;
+		}
+
+		bool CompoundPacket::Add(
+		  std::vector<ReceiverReport*>& receiverReports,
+		  ReceiverReferenceTime* receiverReferenceTimeReport)
+		{
+			// Add the items into the packet.
+
+			for (auto* report : receiverReports)
+			{
+				this->receiverReportPacket.AddReport(report);
+			}
+
+			if (receiverReferenceTimeReport)
+			{
+				this->xrPacket.AddReport(receiverReferenceTimeReport);
+			}
+
+			// New items can hold in the packet, report it.
+			if (GetSize() <= MaxSize)
+			{
+				return true;
+			}
+
+			// New items can not hold in the packet, remove them,
+			// delete and report it.
+
+			for (auto* report : receiverReports)
+			{
+				this->receiverReportPacket.RemoveReport(report);
+				delete report;
+			}
+
+			if (receiverReferenceTimeReport)
+			{
+				this->xrPacket.RemoveReport(receiverReferenceTimeReport);
+				delete receiverReferenceTimeReport;
+			}
+
+			return false;
 		}
 
 		void CompoundPacket::Dump()
@@ -100,7 +240,9 @@ namespace RTC
 				this->senderReportPacket.Dump();
 
 				if (this->receiverReportPacket.GetCount() != 0u)
+				{
 					this->receiverReportPacket.Dump();
+				}
 			}
 			else
 			{
@@ -108,10 +250,14 @@ namespace RTC
 			}
 
 			if (this->sdesPacket.GetCount() != 0u)
+			{
 				this->sdesPacket.Dump();
+			}
 
 			if (this->xrPacket.Begin() != this->xrPacket.End())
+			{
 				this->xrPacket.Dump();
+			}
 
 			MS_DUMP("</CompoundPacket>");
 		}
@@ -119,8 +265,6 @@ namespace RTC
 		void CompoundPacket::AddSenderReport(SenderReport* report)
 		{
 			MS_TRACE();
-
-			MS_ASSERT(!HasSenderReport(), "a Sender Report is already present");
 
 			this->senderReportPacket.AddReport(report);
 		}
@@ -137,20 +281,6 @@ namespace RTC
 			MS_TRACE();
 
 			this->sdesPacket.AddChunk(chunk);
-		}
-
-		void CompoundPacket::AddReceiverReferenceTime(ReceiverReferenceTime* report)
-		{
-			MS_TRACE();
-
-			this->xrPacket.AddReport(report);
-		}
-
-		void CompoundPacket::AddDelaySinceLastRr(DelaySinceLastRr* report)
-		{
-			MS_TRACE();
-
-			this->xrPacket.AddReport(report);
 		}
 	} // namespace RTCP
 } // namespace RTC

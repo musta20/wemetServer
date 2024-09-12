@@ -236,7 +236,11 @@ void RemoteBitrateEstimatorAbsSendTime::IncomingPacketInfo(
     uint32_t send_time_24bits,
     size_t payload_size,
     uint32_t ssrc) {
-  MS_ASSERT(send_time_24bits < (1ul << 24), "invalid sendTime24bits value");
+  // RTC_CHECK(send_time_24bits < (1ul << 24));
+  if (send_time_24bits >= (1ul << 24)) {
+    MS_ERROR("invalid sendTime24bits value");
+    return;
+  }
 
   if (!uma_recorded_) {
     uma_recorded_ = true;
@@ -285,6 +289,8 @@ void RemoteBitrateEstimatorAbsSendTime::IncomingPacketInfo(
     if (payload_size > kMinProbePacketSize &&
         (!remote_rate_.ValidEstimate() ||
          now_ms - first_packet_time_ms_ < kInitialProbingIntervalMs)) {
+
+#if MS_LOG_DEV_LEVEL == 3
       // TODO(holmer): Use a map instead to get correct order?
       if (total_probes_received_ < kMaxProbePackets) {
         int send_delta_ms = -1;
@@ -302,6 +308,8 @@ void RemoteBitrateEstimatorAbsSendTime::IncomingPacketInfo(
             send_delta_ms,
             recv_delta_ms);
       }
+#endif
+
       probes_.push_back(Probe(send_time_ms, arrival_time_ms, payload_size));
       ++total_probes_received_;
       // Make sure that a probe which updated the bitrate immediately has an

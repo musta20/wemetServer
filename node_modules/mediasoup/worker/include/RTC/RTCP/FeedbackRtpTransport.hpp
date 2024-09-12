@@ -42,6 +42,10 @@ namespace RTC
 		class FeedbackRtpTransportPacket : public FeedbackRtpPacket
 		{
 		public:
+			static constexpr int64_t BaseTimeTick   = 64;
+			static constexpr int64_t TimeWrapPeriod = BaseTimeTick * (1ll << 24);
+
+		public:
 			struct PacketResult
 			{
 				PacketResult(uint16_t sequenceNumber, bool received)
@@ -205,12 +209,18 @@ namespace RTC
 			{
 			}
 			FeedbackRtpTransportPacket(CommonHeader* commonHeader, size_t availableLen);
-			~FeedbackRtpTransportPacket();
+			~FeedbackRtpTransportPacket() override;
 
 		public:
+			bool IsBaseSet() const
+			{
+				return this->baseSet;
+			}
+			void SetBase(uint16_t sequenceNumber, uint64_t timestamp);
 			AddPacketResult AddPacket(uint16_t sequenceNumber, uint64_t timestamp, size_t maxRtcpPacketLen);
-			void Finish(); // Just for locally generated packets.
-			bool IsFull()
+			// Just for locally generated packets.
+			void Finish();
+			bool IsFull() const
 			{
 				// NOTE: Since AddPendingChunks() is called at the end, we cannot track
 				// the exact ongoing value of packetStatusCount. Hence, let's reserve 7
@@ -219,7 +229,7 @@ namespace RTC
 			}
 			bool IsSerializable() const
 			{
-				return this->deltas.size() > 0;
+				return !this->deltas.empty();
 			}
 			bool IsCorrect() const // Just for locally generated packets.
 			{
@@ -237,9 +247,30 @@ namespace RTC
 			{
 				return this->referenceTime;
 			}
+			// NOTE: We only use this for testing purpose.
+			void SetReferenceTime(int64_t referenceTime)
+			{
+				this->referenceTime = (referenceTime % TimeWrapPeriod) / BaseTimeTick;
+			}
 			int64_t GetReferenceTimestamp() const // Reference time in ms.
 			{
-				return static_cast<int64_t>(this->referenceTime) * 64;
+				return TimeWrapPeriod + static_cast<int64_t>(this->referenceTime) * BaseTimeTick;
+			}
+			int64_t GetBaseDelta(const int64_t previousTimestampMs) const
+			{
+				int64_t delta = GetReferenceTimestamp() - previousTimestampMs;
+
+				// Compensate for wrap around.
+				if (std::abs(delta - TimeWrapPeriod) < std::abs(delta))
+				{
+					delta -= TimeWrapPeriod;
+				}
+				else if (std::abs(delta + TimeWrapPeriod) < std::abs(delta))
+				{
+					delta += TimeWrapPeriod;
+				}
+
+				return delta;
 			}
 			uint8_t GetFeedbackPacketCount() const
 			{
@@ -267,7 +298,9 @@ namespace RTC
 			size_t GetSize() const override
 			{
 				if (this->size)
+				{
 					return this->size;
+				}
 
 				// Fixed packet size.
 				size_t size = FeedbackRtpPacket::GetSize();
@@ -289,15 +322,21 @@ namespace RTC
 			void AddPendingChunks();
 
 		private:
+			// Whether baseSequenceNumber has been set.
+			bool baseSet{ false };
 			uint16_t baseSequenceNumber{ 0u };
+			// 24 bits signed integer.
 			int32_t referenceTime{ 0 };
-			uint16_t latestSequenceNumber{ 0u }; // Just for locally generated packets.
-			uint64_t latestTimestamp{ 0u };      // Just for locally generated packets.
+			// Just for locally generated packets.
+			uint16_t latestSequenceNumber{ 0u };
+			// Just for locally generated packets.
+			uint64_t latestTimestamp{ 0u };
 			uint16_t packetStatusCount{ 0u };
 			uint8_t feedbackPacketCount{ 0u };
 			std::vector<Chunk*> chunks;
 			std::vector<int16_t> deltas;
-			Context context; // Just for locally generated packets.
+			// Just for locally generated packets.
+			Context context;
 			size_t deltasAndChunksSize{ 0u };
 			size_t size{ 0 };
 			bool isCorrect{ true };
