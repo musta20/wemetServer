@@ -133,36 +133,57 @@ module.exports = ({
 
   const createRoomForFristTime = async ({ title, IsPublic }, fun) => {
     TheRoomHelper.LeavAllRooms(socket);
-    FullRomeName =
-      '{"title":"' +
-      title +
-      '","BossId":"' +
-      socket.id +
-      '","TraficRoom":"' +
-      TheRoomHelper.GenerateRoomeTrafic(socket.id) +
-      '"}';
+    // FullRomeName = {
+    //   title: title,
+    //   BossId: socket.id,
+    //   TraficRoom: TheRoomHelper.GenerateRoomeTrafic(socket.id),
+    // }
+    // FullRomeName =
+    //   '{"title":"' +
+    //   title +
+    //   '","BossId":"' +
+    //   socket.id +
+    //   '","TraficRoom":"' +
+    //   TheRoomHelper.GenerateRoomeTrafic(socket.id) +
+    //   '"}';
 
     const router1 = await createRoom(title, socket.id);
   //  console.log("CREATE STARTING STREAM ");
 
-    peers[socket.id] = {
-      socket,
-      roomName: title,
-      transports: [],
-      producers: [],
-      consumers: [],
-      peerDetails: {
-        name: "",
-        isAdmin: true,
-        isRoomLocked: false,
-        isStream: true,
-        IsPublic: IsPublic,
-      },
-    };
+
+  peers.set(socket.id, {
+    socket,
+    roomName: title,
+    transports:new Map(),
+    producers: new Map(),
+    consumers:new Map(),
+    peerDetails: {
+      name: "",
+      isAdmin: true,
+      isRoomLocked: false,
+      isStream: true,
+      IsPublic: IsPublic,
+    },
+  });
+  
+    // peers[socket.id] = {
+    //   socket,
+    //   roomName: title,
+    //   transports: new Map(),
+    //   producers: [],
+    //   consumers: [],
+    //   peerDetails: {
+    //     name: "",
+    //     isAdmin: true,
+    //     isRoomLocked: false,
+    //     isStream: true,
+    //     IsPublic: IsPublic,
+    //   },
+    // };
 
     const rtpCapabilities = router1.rtpCapabilities;
 
-    socket.join(FullRomeName);
+    socket.join(JSON.stringify(FullRomeName));
     socket.to("mainrrom").emit("AddRoom", { title });
     
     fun({
@@ -208,6 +229,7 @@ module.exports = ({
     peers[socket.id] = {
       socket,
       roomName, // Name for the Router this Peer joined
+      
       transports: [],
       producers: [],
       consumers: [],
@@ -392,6 +414,7 @@ module.exports = ({
     FullRomeName = TheRoomHelper.GetTheFullRoomName(
       TheRoomHelper.GetRoomName(room)
     );
+    
     FullRomeName =
       '{"title":"' +
       FullRomeName.title +

@@ -1,18 +1,27 @@
 class RoomHelper {
   constructor(socket) {
     this.GetRoomsNames = this.GetRoomsNames.bind(this);
+    
     this.IsPublic = this.IsPublic.bind(this);
+    
     this.GetTheStringFullRoomName = this.GetTheStringFullRoomName.bind(this);
+    
     this.socket = socket;
+    
     this.isJsonString = this.isJsonString.bind(this);
+
     this.GetAllUsersInRoom = this.GetAllUsersInRoom.bind(this);
 
+    this.broadcasters = new Map();
     
+    this.room = new Map();
+
   }
+
   //this function create a name for the viewr
   GenerateRoomeTrafic(id) {
-    let rom = Math.floor(Math.random() * 1000000);
-    return rom + "@" + id;
+    //let rom = Math.floor(Math.random() * 1000000);
+    return "traffic@" + id;
   }
 
   //get the user id
@@ -24,59 +33,46 @@ class RoomHelper {
 
   //this function will check if the room is public or not
   IsPublic(room, peers) {
-    let peerslist = Object.values(peers);
-    let Theroom = { title: "" };
-    try {
-      Theroom = JSON.parse(room);
-    } catch (e) {
-      return null;
+    for (const [, peer] of peers) {
+      if (peer.peerDetails.isAdmin && peer.roomName === room) {
+        return peer.peerDetails.IsPublic;
+      }
     }
-
-    let admin = peerslist.find(
-      (peer) =>
-        peer.peerDetails.isAdmin == true && peer.roomName == Theroom.title
-    );
-
-    return admin ? admin.peerDetails.IsPublic : false;
+    return false;
   }
 
   //this function will return thr current live rooms names
   GetRoomsNames(peers) {
-    //socket.rooms
-    //  //console.log("THE ALL PEERS ")
-    let myo = this.socket.adapter.rooms;
+ 
+    let rooms = this.socket.adapter.rooms;
+    let publicRoomTitles = [];
+    
+    for (const [roomKey, roomValue] of rooms) {
+      if (roomKey !== null) {
+        try {
 
-    // //console.log("GET THE ROOMS NAMES :");
-
-    //  //console.log(myo)
-    let obj = [];
-    myo.forEach((element, index) => {
-      let ispublic = this.IsPublic(index, peers);
-
-      if (index != null && ispublic) {
-        obj.push(JSON.parse(index).title);
+          if (this.IsPublic(roomKey, peers)) {
+            publicRoomTitles.push(roomKey);
+          }
+        } catch (error) {
+          console.error(`Error parsing room key: ${roomKey}`, error);
+        }
       }
-    });
-    // //console.log(obj);
-    return obj;
+    }
+
+    return publicRoomTitles;
   }
 
     //this function will return thr current live rooms names
     GetAllUsersInRoom(room) {
-      let RoomList = this.socket.adapter.rooms;
+      
+      const fetchSockets = this.socket.in(room).fetchSockets();
   
-      let userList;
-    
-      RoomList.forEach((element, index) => {
-        if(index ===room) {
-
-          userList = element
-        } 
-        
-  
-      });
-      // //console.log(obj);
-     return userList;
+      // if (rooms.has(room)) {
+      //   return rooms.get(room);
+      // }
+      
+      return fetchSockets;
     }
 
   //is the user viwer or gone join the room
@@ -154,12 +150,13 @@ let retunFullRomeName;
   }
 
   //get the room admin id
-  GetRoomBossId(room, rooms, peers) {
-    let users = rooms[room].peers;
-
-    let admin = users.find((peer) => peers[peer].peerDetails.isAdmin == true);
-
-    return peers[admin];
+  GetRoomBossId(room, peers) {
+    for (const [peerId, peer] of peers) {
+      if (peer.roomName === room && peer.peerDetails.isAdmin === true) {
+        return peerId;
+      }
+    }
+    return undefined;
   }
 
   isJsonString(str) {
@@ -175,30 +172,15 @@ let retunFullRomeName;
   }
 
   //chekc if the room exist
-  IsRommeExist(room, socket) {
-    let myo = this.socket.adapter.rooms;
-
-    let obj = [];
-
-    myo.forEach( (element, index) =>{
-
-      if (this.isJsonString(index)) {
-        //console.log(`IS THE ROOM : ${index} EXIST IN THE ACTIVE ROOMS IN THE NEXT LIST:`);
-
-        obj.push(JSON.parse(index).title);
-      }
-
-    });
-
-  //  //console.log(`IS THE ROOM : ${room} EXIST IN THE ACTIVE ROOMS IN THE NEXT LIST:`);
-   // //console.log(obj)
-    return obj.includes(room);
+  IsRoomExist(room) {
+    const rooms = this.socket.adapter.rooms;
+    return rooms.has(room);
   }
 
   //chekc if room is fully acoupy
   IsRoomFull(room) {
     try {
-      if (this.socket.rooms[room].length >= 5) {
+      if (this.socket.in(room).fetchSockets.length >= 5) {
         return true;
       }
     } catch (e) {}
@@ -216,27 +198,43 @@ let retunFullRomeName;
 
     })
      */
-    const roomStr = [...socket.rooms][1];
+    return socket.rooms;
+  //   const roomStr = [...socket.rooms][1];
 
-    ////console.log("DISPLAYING THE ROOM STR");
-   // console.log(roomStr);
-    if (roomStr === "mainrrom") return roomStr;
-    if(!this.isJsonString(roomStr)) return "";
-    const obj = JSON.parse(roomStr);
+  //   ////console.log("DISPLAYING THE ROOM STR");
+  //  // console.log(roomStr);
+  //   if (roomStr === "mainrrom") return roomStr;
+  //   if(!this.isJsonString(roomStr)) return "";
+  //   const obj = JSON.parse(roomStr);
 
-    return obj.title;
+  //   return obj.title;
   }
 
   //quit all room iam connected to
   LeavAllRooms(socket) {
-    let AllRome = this.GetRoomsIamIn(socket);
-    if(!AllRome) return true;
-    if (AllRome === "mainrrom") {
-      socket.leave(AllRome);
-      return true;
+
+
+  return new Promise((resolve) => {
+    const rooms = Array.from(socket.rooms);
+    
+    // The first item is the socket's ID, so we start from the second item
+    for (let i = 1; i < rooms.length; i++) {
+      socket.leave(rooms[i]);
     }
-    const theroom = this.GetTheStringFullRoomName(AllRome);
-    if (theroom) socket.leave(theroom);
+    
+    // We use process.nextTick to ensure all leave operations have completed
+    process.nextTick(() => {
+      resolve();
+    });
+  });
+   // let AllRome = this.GetRoomsIamIn(socket);
+   // if(!AllRome) return true;
+   // if (AllRome === "mainrrom") {
+   //   socket.leave(AllRome);
+   //   return true;
+   // }
+   // const theroom = this.GetTheStringFullRoomName(AllRome);
+   // if (theroom) socket.leave(theroom);
     //  if (AllRome != null) {
     //  AllRome.forEach(rome => {
 
@@ -244,7 +242,7 @@ let retunFullRomeName;
 
     //  })
     //  }
-    return true;
+ //   return true;
   }
 }
 

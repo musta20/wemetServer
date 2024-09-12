@@ -139,36 +139,25 @@ io.on("connection", async (socket) => {
 
   await roomEventEventHandler({
     socket,
-    peers,
+  //  peers,
     TheRoomHelper,
-    producers,
+  //  producers,
     createRoom,
-    rooms,
-    fs,
+   // rooms,
+ //   fs,
   });
 
   await mediaSoupEventHandler({
     socket,
-    peers,
+  //  peers,
     TheRoomHelper,
-    transports,
-    producers,
-    consumers,
-    rooms,
-    fs,
+   // transports,
+   // producers,
+   // consumers,
+   // rooms,
+  //  fs,
   });
 });
-
-
-
-
-
-
-
-
-
-
-
 
 
 app.use(express.urlencoded({ extended: false }));

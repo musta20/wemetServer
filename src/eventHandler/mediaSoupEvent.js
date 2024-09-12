@@ -47,6 +47,7 @@ module.exports = async ({
     if (!TheroomName) return;
 
     if (!TheRoomHelper.IsRommeExist(TheroomName, socket)) {
+      
       if (TheroomName !== "mainrrom" && !TheroomName.includes("@")) {
         rooms?.[TheroomName]?.router?.close()
         socket.to("mainrrom").emit("DelteRoom", { TheroomName });
