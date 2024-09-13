@@ -3,9 +3,9 @@ require("dotenv").config();
 const mediaSoupHelper = ({
   socket,
   peers,
-  transports,
-  producers,
-  consumers,
+ // transports,
+ // producers,
+ // consumers,
   TheRoomHelper,
 }) => {
   /*
@@ -17,10 +17,10 @@ const mediaSoupHelper = ({
   informConsumers = (roomName, socketId, id) => {
    // console.log(`just joined, id ${id} ${roomName}, ${socketId}`);
 
-    let room = TheRoomHelper.GetTheStringFullRoomName(roomName);
+   // let room = TheRoomHelper.GetTheStringFullRoomName(roomName);
 
     socket
-      .to(room)
+      .to(roomName)
       .emit("new-producer", { producerId: id, socketId: socketId });
   };
 
@@ -36,27 +36,32 @@ const mediaSoupHelper = ({
   };
 
   //this function called to save a producer to the producer array
-  addProducer = (producer, roomName) => {
+  addProducer = (producer) => {
     // producers = [...producers, { socketId: socket.id, producer, roomName }];
-    producers.push({ socketId: socket.id, producer, roomName });
+    peers.get(socket.id).producers.set(producer.id, producer);
+    //producers.push({ socketId: socket.id, producer, roomName });
 
-    peers[socket.id] = {
-      ...peers[socket.id],
-      producers: [...peers[socket.id].producers, producer.id],
-    };
+    // peers[socket.id] = {
+    //   ...peers[socket.id],
+    //   producers: [...peers[socket.id].producers, producer.id],
+    // };
   };
 
   //this function addConsumer to save a addConsumer to the producer array
   addConsumer = (consumer, roomName) => {
+
+
+    peers.get(socket.id).consumers.set(consumer.id, consumer);
+
     // add the consumer to the consumers list
     // consumers = [...consumers, { socketId: socket.id, consumer, roomName }];
-    consumers.push({ socketId: socket.id, consumer, roomName });
+   // consumers.push({ socketId: socket.id, consumer, roomName });
 
     // add the consumer id to the peers list
-    peers[socket.id] = {
-      ...peers[socket.id],
-      consumers: [...peers[socket.id].consumers, consumer.id],
-    };
+    // peers[socket.id] = {
+    //   ...peers[socket.id],
+    //   consumers: [...peers[socket.id].consumers, consumer.id],
+    // };
   };
 
   //this function called when user is disconnect from the server
@@ -116,6 +121,7 @@ const mediaSoupHelper = ({
 
   //this function used to get specifc producerTransport
   getTransport = (socketId) => {
+
     const [producerTransport] = transports.filter(
       (transport) => transport.socketId === socketId && !transport.consumer
     );
@@ -126,16 +132,19 @@ const mediaSoupHelper = ({
   addTransport = (transport, roomName, consumer) => {
 /*     console.log("AA TRANSPORT");
     console.log(transports.length); */
-    transports.push({ socketId: socket.id, transport, roomName, consumer }),
+
+    peers.get(socket.id).transports.set(transport.id, transport);
+
+ //   transports.push({ socketId: socket.id, transport, roomName, consumer }),
       /*     transports = [
       ...transports,
       { socketId: socket.id, transport, roomName, consumer },
     ];
  */
-      (peers[socket.id] = {
-        ...peers[socket.id],
-        transports: [...peers[socket.id].transports, transport.id],
-      });
+      // (peers[socket.id] = {
+      //   ...peers[socket.id],
+      //   transports: [...peers[socket.id].transports, transport.id],
+      // });
 
    // console.log(transports.length);
   };

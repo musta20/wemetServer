@@ -1,4 +1,5 @@
 let Ajv = require("ajv");
+const { RoomHelper } = require("../lib/roomHelper");
 
 module.exports = ({
   socket,
@@ -23,18 +24,29 @@ module.exports = ({
   };
 
   socket.on("leave", (name) => {
+
+      peers.get(socket.id).producers.forEach((producer) => {
+        producer.close();
+      });
+
   //  console.log("\x1b[31m%s\x1b[0m", `closeing closing`);
 
-    const Userproduser = producers.find(
-      (producer) => producer.socketId === socket.id
-    );
-    if (Userproduser) Userproduser.producer.close();
-    let TheRoomLeav = TheRoomHelper.LeavAllRooms(socket);
+    // const Userproduser = producers.find(
+    //   (producer) => producer.socketId === socket.id
+    // );
+  //  peer.get(socket.id).producers.get(socket.id).close();
+  //  let Userproduser = TheRoomHelper.GetTheUserProducers(socket);
+
+ //   if (Userproduser) Userproduser.producer.close();
+  //  let TheRoomLeav = TheRoomHelper.LeavAllRooms(socket);
+
   });
 
   //this event used to HiddeTheRoom or un Hidde Th eRoom  by the admin
   socket.on("HiddeTheRoom", (room, fun) => {
-    if (!peers[socket.id].peerDetails.isAdmin) {
+
+    const   isAdmin = peers.get(socket.id).peerDetails.isAdmin;
+    if (!isAdmin) {
       fun({ status: false, room: "you are not the admin" });
       return;
     }
@@ -44,15 +56,15 @@ module.exports = ({
           fun({ status: true, room: "room is locked" });
           return;
         } */
-
-    peers[socket.id].peerDetails.IsPublic =
-      !peers[socket.id].peerDetails.IsPublic;
+   
+    peers.get(socket.id).peerDetails.IsPublic =!isAdmin;
     fun({ status: true, room: "room is unlocked" });
   });
 
   //chanche the value of isstream buy the room
   socket.on("isStream", (set, fun) => {
-    if (!peers[socket.id].peerDetails.isAdmin) {
+    const isAdmin = peers.get(socket.id).peerDetails.isAdmin;
+    if (!isAdmin) {
       fun({ status: false, room: "your not admin" });
       return;
     }
@@ -60,8 +72,8 @@ module.exports = ({
     /*    if (peers[socket.id].peerDetails.isStream) {
       peers[socket.id].peerDetails.isStream = false;
     } else { */
-    peers[socket.id].peerDetails.isStream =
-      !peers[socket.id].peerDetails.isStream;
+    peers.get(socket.id).peerDetails.isStream =
+      !peers.get(socket.id).peerDetails.isStream;
     //}
 
     fun({ status: true, room: "his gone" });
@@ -69,15 +81,17 @@ module.exports = ({
 
   //chanche the value of IsPublic buy the room
   socket.on("IsPublic", (set, fun) => {
-    if (!peers[socket.id].peerDetails.isAdmin) {
+    const isAdmin = peers.get(socket.id).peerDetails.isAdmin;
+
+    if (!isAdmin) {
       fun({ status: false, room: "your not admin" });
       return;
     }
     /*  if (peers[socket.id].peerDetails.IsPublic) {
       peers[socket.id].peerDetails.IsPublic = false;
     } else { */
-    peers[socket.id].peerDetails.IsPublic =
-      !peers[socket.id].peerDetails.IsPublic;
+    peers.get(socket.id).peerDetails.IsPublic =
+      !peers.get(socket.id).peerDetails.IsPublic;
     //  }
 
    // console.log("IsPublic");
@@ -88,22 +102,22 @@ module.exports = ({
   //this check if the room Exist
   socket.on("IsRommeExist", (room, fun) => {
 
-    if (!TheRoomHelper.IsRommeExist(TheRoomHelper.GetRoomName(room), socket)) {
+    if (!TheRoomHelper.IsRommeExist(room, socket)) {
       fun({ status: true, room: room });
       return;
     }
     fun({
       status: false,
       room:
-        "the room " + TheRoomHelper.GetRoomName(room) + " is all ready exict",
+        "the room " + room + " is all ready exict",
     });
   });
 
   //this event used to lock or unlock the room by the admin
   socket.on("LockTheRoom", (room, fun) => {
    // console.log("LockTheRoom");
-
-    if (!peers[socket.id].peerDetails.isAdmin) {
+  const isAdmin = peers.get(socket.id).peerDetails.isAdmin;
+    if (!isAdmin) {
       fun({ status: false, room: "you are not the admin" });
       return;
     }
@@ -115,14 +129,15 @@ module.exports = ({
     } */
     // console.log(!peers[socket.id].peerDetails.isRoomLocked)
     //  console.log(peers[socket.id].peerDetails.isRoomLocked)
-    peers[socket.id].peerDetails.isRoomLocked =
-      !peers[socket.id].peerDetails.isRoomLocked;
+    peers.get(socket.id).peerDetails.isRoomLocked =
+      !peers.get(socket.id).peerDetails.isRoomLocked;
     fun({ status: true, room: "room is unlocked" });
   });
 
   //this event ban user from the room by the admin
   socket.on("kik", (isocketId, fun) => {
-    if (!peers[socket.id].peerDetails.isAdmin) {
+    const isAdmin = peers.get(socket.id).peerDetails.isAdmin;
+    if (!isAdmin) {
       fun({ status: false, room: "your not admin" });
       return;
     }
@@ -183,7 +198,7 @@ module.exports = ({
 
     const rtpCapabilities = router1.rtpCapabilities;
 
-    socket.join(JSON.stringify(FullRomeName));
+    socket.join(title);
     socket.to("mainrrom").emit("AddRoom", { title });
     
     fun({
@@ -198,7 +213,7 @@ module.exports = ({
 
   const joinExistRoom = async (roomName, fun) => {
     UserId = TheRoomHelper.GenerateUserId(socket.id);
-    FullRomeName = TheRoomHelper.GetTheFullRoomName(roomName);
+  //  FullRomeName = TheRoomHelper.GetTheFullRoomName(roomName);
 
     let admin = TheRoomHelper.GetRoomBossId(roomName, rooms, peers);
 
@@ -208,36 +223,36 @@ module.exports = ({
       return;
     }
 
-    let BossId = FullRomeName.BossId;
-    FullRomeName =
-      '{"title":"' +
-      FullRomeName.title +
-      '","BossId":"' +
-      FullRomeName.BossId +
-      '","TraficRoom":"' +
-      FullRomeName.TraficRoom +
-      '"}';
+    // let BossId = FullRomeName.BossId;
+    // FullRomeName =
+    //   '{"title":"' +
+    //   FullRomeName.title +
+    //   '","BossId":"' +
+    //   FullRomeName.BossId +
+    //   '","TraficRoom":"' +
+    //   FullRomeName.TraficRoom +
+    //   '"}';
 /*     console.log("JOINING THE ROOM");
     console.log(FullRomeName);
     console.log("ALL THE ROOMS NAMES");
 
     console.log(socket.adapter.rooms); */
-    socket.join(FullRomeName);
+    socket.join(roomName);
 
     const router1 = await createRoom(roomName, socket.id);
 
-    peers[socket.id] = {
+    peers.set(socket.id,{
       socket,
       roomName, // Name for the Router this Peer joined
       
-      transports: [],
-      producers: [],
-      consumers: [],
+      transports: new Map(),
+      producers: new Map(),
+      consumers: new Map(),
       peerDetails: {
         name: "",
         isAdmin: false, // Is this Peer the Admin?
       },
-    };
+    });
 
     const rtpCapabilities = router1.rtpCapabilities;
 
@@ -254,19 +269,21 @@ module.exports = ({
   const watchTheStream = async (roomName, fun) => {
     UserId = TheRoomHelper.GenerateUserId(socket.id);
 
-    FullRomeName = TheRoomHelper.GetTheFullRoomName(roomName);
+   // FullRomeName = TheRoomHelper.GetTheFullRoomName(roomName);
 
-    let peerslist = Object.values(peers);
+   // let peerslist = Object.values(peers);
+   let admin = TheRoomHelper.GetRoomBossId(roomName, peers);
+   try {
+    //  let admin = peerslist.find((peer) => peer.peerDetails.isAdmin === true);
 
-    try {
-      let admin = peerslist.find((peer) => peer.peerDetails.isAdmin === true);
-
-      if (!peers[admin.socket.id].peerDetails.isStream) {
+       
+      
+      if (!admin.peerDetails.isStream) {
         fun({
           status: false,
           room:
             "the room " +
-            TheRoomHelper.GetRoomName(roomName) +
+            roomName +
             " is not Streamed ",
         });
         return;
@@ -275,45 +292,48 @@ module.exports = ({
       console.error(e);
     }
 
-    TraficRoom = FullRomeName.TraficRoom;
+   TraficRoom =TheRoomHelper.GenerateRoomeTrafic(roomName)
 
-    socket.join(TraficRoom);
 
     let clients = TheRoomHelper.GetAllUsersInRoom(TraficRoom);
 
-    const router1 = await createRoom(TraficRoom, socket.id);
 
-    peers[socket.id] = {
+    const TraficRoomRouter = await createRoom(TraficRoom, socket.id);
+
+    peers.set(socket.id , {
       socket,
       roomName: TraficRoom, // Name for the Router this Peer joined
-      transports: [],
-      producers: [],
-      consumers: [],
+      transports: new Map(),
+      producers:  new Map(),
+      consumers:  new Map(),
       peerDetails: {
         name: "",
         isAdmin: false, // Is this Peer the Admin?
       },
-    };
-    const [first] = clients;
+    });
 
-    if (peers[first].socket.id == socket.id) {
-      let router1 = rooms[FullRomeName.title].router;
+  //  const [first] = clients;
 
-      let router2 = rooms[TraficRoom].router;
+    if (!clients.size) {
+      socket.join(TraficRoom);
 
-      producers.forEach(async (producerData) => {
-        if (producerData.roomName === FullRomeName.title) {
+      let mainroom = rooms.get(title);
+
+      //let router2 = rooms.get(TraficRoom);
+
+      clients.forEach(async (user) => {
+       // if (producerData.roomName === FullRomeName.title) {
           try {
-            await router1.pipeToRouter({
-              producerId: producerData.producer.id,
-              router: router2,
+            await mainroom.pipeToRouter({
+              producerId: user.producer.id,
+              router: TraficRoomRouter,
             });
           } catch (e) {}
-        }
+       // }
       });
     }
 
-    const rtpCapabilities = router1.rtpCapabilities;
+    const rtpCapabilities = TraficRoomRouter.rtpCapabilities;
 
     fun({
       status: false,
@@ -362,9 +382,7 @@ module.exports = ({
     if (
       TheRoomHelper.IsRommeExist(roomName, socket) &&
       !roomProps.IsViewer &&
-      !TheRoomHelper.IsRoomFull(
-        TheRoomHelper.GetTheStringFullRoomName(roomName)
-      )
+      !TheRoomHelper.IsRoomFull(roomName)
     ) {
       joinExistRoom(roomName, fun);
       return;
@@ -411,25 +429,25 @@ module.exports = ({
 
   //the event take a  message and brodcast it to the room
   socket.on("Message", (room, Message) => {
-    FullRomeName = TheRoomHelper.GetTheFullRoomName(
-      TheRoomHelper.GetRoomName(room)
-    );
+    // FullRomeName = TheRoomHelper.GetTheFullRoomName(
+    //   TheRoomHelper.GetRoomName(room)
+    // );
     
-    FullRomeName =
-      '{"title":"' +
-      FullRomeName.title +
-      '","BossId":"' +
-      FullRomeName.BossId +
-      '","TraficRoom":"' +
-      FullRomeName.TraficRoom +
-      '"}';
+    // FullRomeName =
+    //   '{"title":"' +
+    //   FullRomeName.title +
+    //   '","BossId":"' +
+    //   FullRomeName.BossId +
+    //   '","TraficRoom":"' +
+    //   FullRomeName.TraficRoom +
+    //   '"}';
     //console.log("the room iam emmetin to ==============>")
     //console.log(FullRomeName)
-    socket.to(FullRomeName.TraficRoom).emit("Message", {
+    socket.to(TheRoomHelper.GenerateRoomeTrafic(room)).emit("Message", {
       Message,
     });
 
-    socket.to(FullRomeName).emit("Message", {
+    socket.to(room).emit("Message", {
       Message,
     });
   });

@@ -67,11 +67,11 @@ const http = Http.createServer(credentials, app);
 const io = require("socket.io")(http, cors);
 
 let worker;
-let rooms = {}; // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
-let peers = {}; // { socketId1: { roomName1, socket, transports = [id1, id2,] }, producers = [id1, id2,] }, consumers = [id1, id2,], peerDetails }, ...}
-let transports = []; // [ { socketId1, roomName1, transport, consumer }, ... ]
-let producers = []; // [ { socketId1, roomName1, producer, }, ... ]
-let consumers = []; // [ { socketId1, roomName1, consumer, }, ... ]
+let rooms = new Map(); // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
+let peers = new Map();  // { socketId1: { roomName1, socket, transports = [id1, id2,] }, producers = [id1, id2,] }, consumers = [id1, id2,], peerDetails }, ...}
+//let transports = []; // [ { socketId1, roomName1, transport, consumer }, ... ]
+//let producers = []; // [ { socketId1, roomName1, producer, }, ... ]
+//let consumers = []; // [ { socketId1, roomName1, consumer, }, ... ]
 
 /*
 mediasoup use mediasoup to create worker
@@ -111,20 +111,24 @@ const mediaCodecs = [
 
 let TheRoomHelper;
 
-const createRoom = async (roomName, socketId) => {
+const createRoom = async (roomName) => {
   let router1;
-  let peers = [];
-  if (rooms[roomName]) {
-    router1 = rooms[roomName].router;
-    peers = rooms[roomName].peers || [];
+
+  //let peers = new Map();
+
+  if (rooms.has(roomName)) {
+    router1 = rooms.get(roomName);
+   // peers = rooms[roomName].peers || [];
   } else {
     router1 = await worker.createRouter({ mediaCodecs });
   }
 
-  rooms[roomName] = {
-    router: router1,
-    peers: [...peers, socketId],
-  };
+  // rooms[roomName] = {
+  //   router: router1,
+  //   peers: [...peers, socketId],
+  // };
+
+  rooms.set(roomName, router1);
 
   return router1;
 };
