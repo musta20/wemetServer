@@ -121,6 +121,8 @@ const createRoom = async (roomName) => {
    // peers = rooms[roomName].peers || [];
   } else {
     router1 = await worker.createRouter({ mediaCodecs });
+    rooms.set(roomName, router1);
+
   }
 
   // rooms[roomName] = {
@@ -128,7 +130,6 @@ const createRoom = async (roomName) => {
   //   peers: [...peers, socketId],
   // };
 
-  rooms.set(roomName, router1);
 
   return router1;
 };
@@ -139,12 +140,12 @@ io.on("connection", async (socket) => {
 
   TheRoomHelper = new RoomHelper(socket);
 
- 
+  console.log("\x1b[32m%s\x1b[0m", `NEW CONNECTION: ${socket.id} `);
 
   await roomEventEventHandler({
     socket,
-  //  peers,
-    TheRoomHelper,
+   peers,
+   TheRoomHelper,
   //  producers,
     createRoom,
    // rooms,
@@ -153,12 +154,12 @@ io.on("connection", async (socket) => {
 
   await mediaSoupEventHandler({
     socket,
-  //  peers,
+   peers,
     TheRoomHelper,
    // transports,
    // producers,
    // consumers,
-   // rooms,
+    rooms,
   //  fs,
   });
 });

@@ -8,6 +8,7 @@ const mediaSoupHelper = ({
  // consumers,
   TheRoomHelper,
 }) => {
+
   /*
   this function called to tell all users in the room
   that there is a new user just joined the room
@@ -15,7 +16,7 @@ const mediaSoupHelper = ({
   and the room name 
   */
   informConsumers = (roomName, socketId, id) => {
-   // console.log(`just joined, id ${id} ${roomName}, ${socketId}`);
+    console.log(`just joined, id ${id} ${roomName}, ${socketId}`);
 
    // let room = TheRoomHelper.GetTheStringFullRoomName(roomName);
 
@@ -64,6 +65,46 @@ const mediaSoupHelper = ({
     // };
   };
 
+  
+
+  disConnectPeer = ( socketId ) => {
+    peer = peers.get(socketId);
+   // console.log(socketId);
+    if(!peer) return;
+
+   // console.log("\x1b[33m%s\x1b[0m", `CLOSING THE PEER ${socketId}`);
+
+     for(const [,consumer] of peer.consumers) {
+      console.log("\x1b[33m%s\x1b[0m", `CLOSING THE consumer  `);
+
+      consumer.close();
+    }
+
+    for(const [,producer] of peer.producers) {
+
+      console.log("\x1b[33m%s\x1b[0m", `CLOSING THE producer  `);
+
+      producer.close();
+    }
+
+    for(const [,transport] of peer.transports) {
+
+      console.log("\x1b[33m%s\x1b[0m", `CLOSING THE transport  `);
+
+      transport.close();
+    }
+
+    // if (!items.length) return;
+    // items.forEach((item, Index) => {
+    //   if (item.socketId === socketId) {
+    //   //  console.log("\x1b[33m%s\x1b[0m", `CLOSING THE ${type}`);
+    
+    //     item[type].close();
+    //     items.splice(Index, 1);
+
+    //   }
+    // });
+  };
   //this function called when user is disconnect from the server
   removeItems = (items, socketId, type) => {
     if (!items.length) return;
@@ -122,10 +163,21 @@ const mediaSoupHelper = ({
   //this function used to get specifc producerTransport
   getTransport = (socketId) => {
 
-    const [producerTransport] = transports.filter(
-      (transport) => transport.socketId === socketId && !transport.consumer
-    );
-    return producerTransport.transport;
+    const transport  = peers.get(socketId).transports;
+    
+    let returnProducerTransport;
+
+    for(const [,producerTransport] of transport) {
+
+     if(!producerTransport.consumer) returnProducerTransport = producerTransport;
+
+    }
+
+    // const [producerTransport] = transports.filter(
+    //   (transport) => transport.socketId === socketId && !transport.consumer
+    // );
+    return returnProducerTransport;
+
   };
 
   //this function addTransport save transport to the Transport array
@@ -156,6 +208,7 @@ const mediaSoupHelper = ({
     removeItems,
     addConsumer,
     addProducer,
+    disConnectPeer,
     informViewrs,
     informConsumers,
   };

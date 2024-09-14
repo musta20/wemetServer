@@ -1,5 +1,6 @@
 let Ajv = require("ajv");
 const { RoomHelper } = require("../lib/roomHelper");
+const fs = require("fs");
 
 module.exports = ({
   socket,
@@ -8,7 +9,7 @@ module.exports = ({
   producers,
   createRoom,
   rooms,
-  fs,
+ // fs,
 }) => {
   let ajv = new Ajv();
   //the schema used to valdait the input
@@ -24,10 +25,14 @@ module.exports = ({
   };
 
   socket.on("leave", (name) => {
+    console.log('THE EVENT OF LEAVGIN THE ROOM IS TRIGGERD');
+  let producers =   peers.get(socket.id)?.producers;
 
-      peers.get(socket.id).producers.forEach((producer) => {
+  if(!producers || !producers?.size) return;
+
+  for(const [ ,producer] of producers)  {
         producer.close();
-      });
+      };
 
   //  console.log("\x1b[31m%s\x1b[0m", `closeing closing`);
 
@@ -102,7 +107,7 @@ module.exports = ({
   //this check if the room Exist
   socket.on("IsRommeExist", (room, fun) => {
 
-    if (!TheRoomHelper.IsRommeExist(room, socket)) {
+    if (!TheRoomHelper.IsRoomExist(room, socket)) {
       fun({ status: true, room: room });
       return;
     }
@@ -215,9 +220,8 @@ module.exports = ({
     UserId = TheRoomHelper.GenerateUserId(socket.id);
   //  FullRomeName = TheRoomHelper.GetTheFullRoomName(roomName);
 
-    let admin = TheRoomHelper.GetRoomBossId(roomName, rooms, peers);
-
-    if (admin.peerDetails.isRoomLocked) {
+    let admin = TheRoomHelper.GetRoomBossId(roomName, peers);
+     if (peers.get(admin).peerDetails.isRoomLocked) {
       // fun({ status: false, room: "the room " + roomName + " is locked " });
       watchTheStream(roomName, fun);
       return;
@@ -258,7 +262,7 @@ module.exports = ({
 
     fun({
       status: true,
-      BossId: BossId,
+      BossId: admin,
       First: false,
       UserId: UserId,
       room: roomName,
@@ -375,12 +379,12 @@ module.exports = ({
       }
     }
 
-    if (!TheRoomHelper.IsRommeExist(roomName, socket)) {
+    if (!TheRoomHelper.IsRoomExist(roomName, socket)) {
       return createRoomForFristTime(roomProps, fun);
     }
 
     if (
-      TheRoomHelper.IsRommeExist(roomName, socket) &&
+      TheRoomHelper.IsRoomExist(roomName, socket) &&
       !roomProps.IsViewer &&
       !TheRoomHelper.IsRoomFull(roomName)
     ) {
@@ -396,7 +400,7 @@ module.exports = ({
 
     let base64Data = img.replace(/^data:image\/png;base64,/, "");
 
-    let imgname = TheRoomHelper.GetRoomsIamIn(socket) + ".png";
+    let imgname = peers.get(socket.id).roomName + ".png";
 
      await fs.writeFile("src/uploads/" + imgname, base64Data, "base64", (err) => {
       if (err) throw err;

@@ -67,12 +67,9 @@ class RoomHelper {
     GetAllUsersInRoom(room) {
       
       const fetchSockets = this.socket.in(room).fetchSockets();
-  
-      // if (rooms.has(room)) {
-      //   return rooms.get(room);
-      // }
       
       return fetchSockets;
+      
     }
 
   //is the user viwer or gone join the room
@@ -218,8 +215,13 @@ let retunFullRomeName;
     const rooms = Array.from(socket.rooms);
     
     // The first item is the socket's ID, so we start from the second item
-    for (let i = 1; i < rooms.length; i++) {
-      socket.leave(rooms[i]);
+    // for (let i = 1; i < rooms.size; i++) {
+    //   socket.leave(rooms[i]);
+    // }
+    
+    for(const [name,room] of rooms){
+      socket.leave(name);
+
     }
     
     // We use process.nextTick to ensure all leave operations have completed
