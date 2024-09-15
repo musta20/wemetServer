@@ -34,7 +34,7 @@ module.exports = async ({
   });
 
   //when the user disconnected this event whill close all producer /consumer
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     disConnectPeer(socket.id);
   // removeItems(consumers, socket.id, "consumer");
   // removeItems(producers, socket.id, "producer");
@@ -43,7 +43,7 @@ module.exports = async ({
     let TheroomName = peers.get(socket.id)?.roomName;
    // console.log("\x1b[33m%s\x1b[0m", `Show the ROOM IAM GETTING OUT OF`);
 
-    console.log(TheroomName);
+  //  console.log(TheroomName);
 
     if (!TheroomName) return;
 
@@ -72,34 +72,23 @@ module.exports = async ({
       // return;
     }
 
-   // console.log("\x1b[32m%s\x1b[0m", `show the GetTheFullRoomName`);
-
-   // FullRomeName = TheRoomHelper.GetTheFullRoomName(TheroomName);
-
-    // if (FullRomeName) {
-    //   FullstringRomeName =
-    //     '{"title":"' +
-    //     FullRomeName.title +
-    //     '","BossId":"' +
-    //     FullRomeName.BossId +
-    //     '","TraficRoom":"' +
-    //     FullRomeName.TraficRoom +
-    //     '"}';
-    // }
-
-    
-   // socket.leave(TheroomName);
+ 
 
     if (peers.get(socket.id)?.peerDetails?.isAdmin) {
-      if (FullRomeName !== null) {
+      if (TheroomName !== null) {
 
-        if (!FullRomeName) return;
+        if (!TheroomName) return;
 
-        let clients = TheRoomHelper.GetAllUsersInRoom(TheroomName);
+        let clients = socket.adapter.rooms.get(TheroomName)
+        console.log("\x1b[33m%s\x1b[0m", `show the clients`);
+       // console.log(clients);
 
-
+       // console.log(socket.adapter.rooms.get(TheroomName)); 
+        
         if (!clients) return;
-        const first = clients.entries().next();
+        const [first] = clients;
+        //console.log(clients.value);
+       // console.log(clients.entries().next());
 
         if (clients.length !== 0) {
           peers.get(first).peerDetails.isAdmin = true;
@@ -158,7 +147,7 @@ module.exports = async ({
       callback
     ) => {
 
-
+      let usocketId;
       try {
 
         const user  = peers.get(socket.id);
@@ -167,6 +156,26 @@ module.exports = async ({
 
         const consumerTransport = user.transports.get(serverConsumerTransportId);
 
+        for(const [index, userPeer] of peers) {
+
+          if(userPeer.roomName === user.roomName) {
+            
+            for(const [, producer] of userPeer.producers) {
+              if(producer.id === remoteProducerId) {
+                 usocketId = index;
+              }
+              
+          }
+
+        }
+
+          // const usocketId = producers.find(
+          //   (producerdata) => producerdata.producer.id == remoteProducerId
+          // );
+  
+        
+        }
+  
         // let consumerTransport = transports.find(
         //   (transportData) =>
         //     transportData.consumer &&
@@ -189,17 +198,28 @@ module.exports = async ({
 
           consumer.on("transportclose", () => {
 
-          //  console.log("\x1b[31m%s\x1b[0m", `transportclose`);
-          });
-
-          consumer.on("producerclose", () => {
-            console.log("\x1b[31m%s\x1b[0m", `producer of consumer closed`);
-
-            socket.emit("producer-closed", {
+ 
+            socket.emit("transportclose", {
 
               remoteProducerId: remoteProducerId,
               
               socketId: usocketId.socketId
+
+            });
+
+          });
+
+          consumer.on("producerclose", () => {
+
+            console.log("\x1b[31m%s\x1b[0m", `producer of consumer closed ` + user.roomName);
+           // socket.emit("producerclosed", {data:"producer of consumer closed"});
+      
+
+           socket.emit("producer-closed", {
+
+              remoteProducerId: remoteProducerId,
+              
+              socketId:  usocketId
 
             });
 
@@ -217,6 +237,9 @@ module.exports = async ({
               (consumerData) => consumerData.consumer.id !== consumer.id
             ); */
           });
+
+
+
            addConsumer(consumer, user.roomName);
 
           // from the consumer extract the following params
@@ -392,7 +415,7 @@ module.exports = async ({
 
       producer.on("transportclose", () => {
         //console.log('transport for this producer closed ')
-        console.log("\x1b[31m%s\x1b[0m", `transportclose`);
+     //   console.log("\x1b[31m%s\x1b[0m", `transportclose`);
 
         producer.close();
       });
