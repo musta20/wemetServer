@@ -67,7 +67,9 @@ const http = Http.createServer(credentials, app);
 const io = require("socket.io")(http, cors);
 
 let worker;
+let trafficRoomWorker;
 let rooms = new Map(); // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
+let Traficrooms = new Map(); // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
 let peers = new Map();  // { socketId1: { roomName1, socket, transports = [id1, id2,] }, producers = [id1, id2,] }, consumers = [id1, id2,], peerDetails }, ...}
 //let transports = []; // [ { socketId1, roomName1, transport, consumer }, ... ]
 //let producers = []; // [ { socketId1, roomName1, producer, }, ... ]
@@ -89,9 +91,26 @@ const createWorker = async () => {
     setTimeout(() => process.exit(1), 2000); // exit in 2 seconds
   });
 
-  return worker;
+ // return worker;
 };
 
+
+const createTrafficWorker = async () => {
+
+   trafficRoomWorker = await mediasoup.createWorker({
+ //   TransportPortRange: [1000, 4000],
+  });
+
+  console.log("\x1b[36m%s\x1b[0m", `WORKER Traffic START PID:${trafficRoomWorker.pid}`);
+
+  trafficRoomWorker.on("died", (error) => {
+    // This implies something serious happened, so kill the application
+    console.error("mediasoup worker has died");
+    setTimeout(() => process.exit(1), 2000); // exit in 2 seconds
+  });
+
+ // return trafficRoomWorker;
+};
 const mediaCodecs = [
   {
     kind: "audio",
@@ -114,27 +133,37 @@ let TheRoomHelper;
 const createRoom = async (roomName) => {
   let router1;
 
-  //let peers = new Map();
-
   if (rooms.has(roomName)) {
     router1 = rooms.get(roomName);
-   // peers = rooms[roomName].peers || [];
+
   } else {
-    router1 = await worker.createRouter({ mediaCodecs });
+     router1 = await worker.createRouter({ mediaCodecs });
     rooms.set(roomName, router1);
 
   }
 
-  // rooms[roomName] = {
-  //   router: router1,
-  //   peers: [...peers, socketId],
-  // };
-
-
   return router1;
 };
 
-worker = createWorker();
+const createTraficRoom = async (roomName) => {
+  let router2;
+
+
+  if (Traficrooms.has(roomName)) {
+
+    router2 = Traficrooms.get(roomName);
+    
+  } else {
+     router2 = await trafficRoomWorker.createRouter({ mediaCodecs });
+
+    Traficrooms.set(roomName, router2);
+
+  }
+
+  return router2;
+};
+createWorker();
+createTrafficWorker();
 
 io.on("connection", async (socket) => {
 
@@ -148,7 +177,9 @@ io.on("connection", async (socket) => {
    TheRoomHelper,
   //  producers,
     createRoom,
-   // rooms,
+    createTraficRoom,
+    Traficrooms,
+    rooms,
  //   fs,
   });
 
@@ -159,6 +190,9 @@ io.on("connection", async (socket) => {
    // transports,
    // producers,
    // consumers,
+   Traficrooms,
+   
+    createRoom,
     rooms,
   //  fs,
   });

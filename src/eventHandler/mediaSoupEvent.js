@@ -7,6 +7,7 @@ module.exports = async ({
   socket,
   peers,
   TheRoomHelper,
+  Traficrooms,
   transports,
   producers,
   consumers,
@@ -30,21 +31,30 @@ module.exports = async ({
     transports,
     producers,
     consumers,
+    Traficrooms,
     TheRoomHelper,
+  });
+
+
+
+  socket.on("leave", (name) => {
+    console.log('THE EVENT OF LEAVGIN THE ROOM IS TRIGGERD');
+    disConnectPeer(socket.id);
+
+    let TheroomName = peers.get(socket.id)?.roomName;
+    socket.leave(TheroomName);
+
   });
 
   //when the user disconnected this event whill close all producer /consumer
   socket.on("disconnect", async () => {
     disConnectPeer(socket.id);
-  // removeItems(consumers, socket.id, "consumer");
-  // removeItems(producers, socket.id, "producer");
-  // removeItems(transports, socket.id, "transport");
+ 
 
     let TheroomName = peers.get(socket.id)?.roomName;
    // console.log("\x1b[33m%s\x1b[0m", `Show the ROOM IAM GETTING OUT OF`);
 
-  //  console.log(TheroomName);
-
+ 
     if (!TheroomName) return;
 
     if (!TheRoomHelper.IsRoomExist(TheroomName, socket)) {
@@ -81,14 +91,11 @@ module.exports = async ({
 
         let clients = socket.adapter.rooms.get(TheroomName)
         console.log("\x1b[33m%s\x1b[0m", `show the clients`);
-       // console.log(clients);
-
-       // console.log(socket.adapter.rooms.get(TheroomName)); 
+    
         
         if (!clients) return;
         const [first] = clients;
-        //console.log(clients.value);
-       // console.log(clients.entries().next());
+     
 
         if (clients.length !== 0) {
           peers.get(first).peerDetails.isAdmin = true;
@@ -126,17 +133,7 @@ module.exports = async ({
 
      peers.delete(socket.id);
 
- // peers.splice(socket.id,1)
-    // try {
-    //   rooms[roomName] = {
-    //     router: rooms[roomName].router,
-    //     peers: rooms[roomName].peers.filter(
-    //       (socketId) => socketId !== socket.id
-    //     ),
-    //   };
-    // } catch (e) {
-    //   console.log(e);
-    // }
+
   });
 
   //asking the server to resv a specifc transport
@@ -152,13 +149,15 @@ module.exports = async ({
 
         const user  = peers.get(socket.id);
 
-        const router = rooms.get(user.roomName);
+        const router = user.roomName.startsWith("traffic@") ? Traficrooms.get(user.roomName) : rooms.get(user.roomName);
 
         const consumerTransport = user.transports.get(serverConsumerTransportId);
 
+        const mainUserRoomName = user.roomName.startsWith("traffic@") ? user.roomName.slice(8) : user.roomName;
+
         for(const [index, userPeer] of peers) {
 
-          if(userPeer.roomName === user.roomName) {
+          if(userPeer.roomName === mainUserRoomName) {
             
             for(const [, producer] of userPeer.producers) {
               if(producer.id === remoteProducerId) {
@@ -169,18 +168,12 @@ module.exports = async ({
 
         }
 
-          // const usocketId = producers.find(
-          //   (producerdata) => producerdata.producer.id == remoteProducerId
-          // );
+        
   
         
         }
   
-        // let consumerTransport = transports.find(
-        //   (transportData) =>
-        //     transportData.consumer &&
-        //     transportData.transport.id == serverConsumerTransportId
-        // )?.transport;
+ 
 
         if (router.canConsume({
             producerId: remoteProducerId,
@@ -203,7 +196,7 @@ module.exports = async ({
 
               remoteProducerId: remoteProducerId,
               
-              socketId: usocketId.socketId
+              socketId: usocketId
 
             });
 
@@ -223,19 +216,7 @@ module.exports = async ({
 
             });
 
-           // consumerTransport.close();
-          
-          //  let transportsIndex=transports.findIndex(t=>t.transport.id === consumerTransport.id)
-           // transports.splice(transportsIndex,1)
-          /*   transports = transports.filter(
-              (transportData) =>
-                transportData.transport.id !== consumerTransport.id
-            ); */
-
-          //  consumer.close();
-      /*       consumers = consumers.filter(
-              (consumerData) => consumerData.consumer.id !== consumer.id
-            ); */
+   
           });
 
 
@@ -268,41 +249,17 @@ module.exports = async ({
 
   // start consumeing the serverconsumeroid
   socket.on("consumer-resume", async ({ serverConsumerId }) => {
-    // console.log("consumer resume IS THERE ERROR HAPENNING HERER");
-    // console.log(`IS THERE ERROR HAPPENG HERE IN THE CONSUMERS`);
-    //  console.log(consumers )
-    //  console.log(serverConsumerId )
+ 
    await peers.get(socket.id).consumers.get(serverConsumerId).resume();
-    // const { consumer } = consumers.find(
-    //   (consumerData) => consumerData.consumer.id === serverConsumerId
-    // );
-    // // console.log(consumer.id)
-    // await consumer.resume();
+ 
   });
 
   //the event will reterun back to the user the currnt produsers in the room
   socket.on("getProducers", ({ isViewr, roomName }, callback) => {
-    //return all producer transports
-    // console.log("WHAT IS THIS WERID CONRDIAL");
-    //  console.log(isViewr)
-    //  console.log(roomName)
-
-    //const roomName =  Mainroom
+ 
       
     let producerList =[];
-    // producers.forEach((producerData) => {
-    //   if (
-    //     producerData.socketId !== socket.id &&
-    //     producerData.roomName === roomName
-    //   ) {
-    //     producerList = [
-    //       ...producerList,
-    //       [producerData.producer.id, producerData.socketId],
-    //     ];
-    //   }
-    // });
-   // console.log("\x1b[31m%s\x1b[0m", `ALL THE PRODUCERS YOU ASK FOR`);
-    //  console.log(producerList);
+ 
 
   for(const [id,peer] of peers){
      if(peer.roomName === roomName  &&
@@ -332,8 +289,11 @@ module.exports = async ({
     // get Router (Room) object this peer is in based on RoomName
     // console.log(roomName)
     // console.log( peers[socket.id])
-    const router = rooms.get(roomName);
+   
+      const router = roomName.startsWith("traffic@") ? Traficrooms.get(roomName) : rooms.get(roomName);
 
+     
+    
     createWebRtcTransport(router).then(
       (transport) => {
         callback({
@@ -399,7 +359,7 @@ module.exports = async ({
       let router1 = rooms.get(roomName);
 
       if (rooms.has(TraficRoom)) {
-        let router2 = rooms.get(TraficRoom);
+        let router2 = Traficrooms.get(TraficRoom);
 
         await router1.pipeToRouter({
           producerId: producer.id,
@@ -415,7 +375,7 @@ module.exports = async ({
 
       producer.on("transportclose", () => {
         //console.log('transport for this producer closed ')
-     //   console.log("\x1b[31m%s\x1b[0m", `transportclose`);
+     //  console.log("\x1b[31m%s\x1b[0m", `transportclose`);
 
         producer.close();
       });
@@ -445,20 +405,11 @@ module.exports = async ({
              id == serverConsumerTransportId )
              {
               transportData.connect({ dtlsParameters });
-              //console.log('Line 413',transportData);
-             // consumerTransport = transportData;
+          
 
              }
        }
 
-  //    console.log(consumerTransport)
-        // const consumerTransport = transports.find(
-        //   (transportData) =>
-        //     transportData.consumer &&
-        //     transportData.transport.id == serverConsumerTransportId
-        // ).transport;
-
-        //await consumerTransport.connect({ dtlsParameters });
       } catch (e) {
         console.log(e);
       }

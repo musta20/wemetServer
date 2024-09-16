@@ -187,24 +187,10 @@ let retunFullRomeName;
 
   //get the room name iam i
   GetRoomsIamIn(socket) {
-    /*     let c = [];
-    Object.getOwnPropertyNames(socket.rooms).forEach(e => {
-      if (this.GetRoomName(e) != null) {
-        c.push(this.GetRoomName(e))
-      }
-
-    })
-     */
+ 
     return socket.rooms;
   //   const roomStr = [...socket.rooms][1];
-
-  //   ////console.log("DISPLAYING THE ROOM STR");
-  //  // console.log(roomStr);
-  //   if (roomStr === "mainrrom") return roomStr;
-  //   if(!this.isJsonString(roomStr)) return "";
-  //   const obj = JSON.parse(roomStr);
-
-  //   return obj.title;
+ 
   }
 
   //quit all room iam connected to
