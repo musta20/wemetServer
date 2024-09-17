@@ -1,116 +1,51 @@
 require("dotenv").config();
 
+process.title = "mediasoup-demo-server";
+process.env.DEBUG = process.env.DEBUG || "*INFO* *WARN* *ERROR*";
+
 const __prod__ = require("./constants");
-
 const express = require("express");
-
+const Logger = require("./src/lib/Logger");
 const { RoomHelper } = require("./src/lib/roomHelper");
-
 const mediaSoupHelper = require("./src/lib/mediaSoupHelper");
-
 const mediaSoupCli = require("mediasoup-cli");
-
-const https = require('https');
-
+const https = require("https");
 const app = express();
-
 const Http = __prod__ ? require("httpolyglot") : require("http");
-
 const fs = require("fs");
-
 const path = require("path");
-
 const PORT = process.env.WEMET_SERVER_PORT || 6800;
-
 const mediasoup = require("mediasoup");
 
 const mediaSoupEventHandler = require("./src/eventHandler/mediaSoupEvent");
-
 const roomEventEventHandler = require("./src/eventHandler/roomEvent");
+
+const http = Http.createServer(app);
+
+const io = require("socket.io")(http);
+
+const config = require("./src/config");
+
+app.use(express.urlencoded({ extended: false }));
+
+app.use(express.json());
+
+let worker;
+let trafficRoomWorker;
+let rooms = new Map();
+let Traficrooms = new Map();
+let peers = new Map();
+
+const logger = new Logger();
+
+const mediasoupWorkers = [];
+
+let TheRoomHelper;
+
 mediaSoupCli.observer(mediasoup);
 
 let credentials = {};
 
-
-let cors = {
-  cors :{
-  origin: "http://localhost:3000",
-  methods: ["GET", "POST"],
-  credentials: true,
-}
-};
-
-if (__prod__) {
-  const privateKey = fs.readFileSync(
-    path.join(__dirname, "ssl/privkey.pem"),
-    "utf8"
-  );
-  const certificate = fs.readFileSync(
-    path.join(__dirname, "ssl/cert.pem"),
-    "utf8"
-  );
-  const ca = fs.readFileSync(path.join(__dirname, "ssl/cert.pem"), "utf8");
-
-  credentials = {
-    key: privateKey,
-    cert: certificate,
-    ca: ca,
-  };
-
-  cors = {
-  };
-}
-
-
-const http = Http.createServer(credentials, app);
-
-const io = require("socket.io")(http, cors);
-
-let worker;
-let trafficRoomWorker;
-let rooms = new Map(); // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
-let Traficrooms = new Map(); // { roomName1: { Router, rooms: [ sicketId1, ... ] }, ...}
-let peers = new Map();  // { socketId1: { roomName1, socket, transports = [id1, id2,] }, producers = [id1, id2,] }, consumers = [id1, id2,], peerDetails }, ...}
-//let transports = []; // [ { socketId1, roomName1, transport, consumer }, ... ]
-//let producers = []; // [ { socketId1, roomName1, producer, }, ... ]
-//let consumers = []; // [ { socketId1, roomName1, consumer, }, ... ]
-
-/*
-mediasoup use mediasoup to create worker
-*/
-const createWorker = async () => {
-  worker = await mediasoup.createWorker({
- //   TransportPortRange: [1000, 4000],
-  });
-
-  console.log("\x1b[36m%s\x1b[0m", `WORKER START PID:${worker.pid}`);
-
-  worker.on("died", (error) => {
-    // This implies something serious happened, so kill the application
-    console.error("mediasoup worker has died");
-    setTimeout(() => process.exit(1), 2000); // exit in 2 seconds
-  });
-
- // return worker;
-};
-
-
-const createTrafficWorker = async () => {
-
-   trafficRoomWorker = await mediasoup.createWorker({
- //   TransportPortRange: [1000, 4000],
-  });
-
-  console.log("\x1b[36m%s\x1b[0m", `WORKER Traffic START PID:${trafficRoomWorker.pid}`);
-
-  trafficRoomWorker.on("died", (error) => {
-    // This implies something serious happened, so kill the application
-    console.error("mediasoup worker has died");
-    setTimeout(() => process.exit(1), 2000); // exit in 2 seconds
-  });
-
- // return trafficRoomWorker;
-};
 const mediaCodecs = [
   {
     kind: "audio",
@@ -128,119 +63,212 @@ const mediaCodecs = [
   },
 ];
 
-let TheRoomHelper;
+main();
 
-const createRoom = async (roomName) => {
-  let router1;
+async function main() {
+  await createWorkers();
 
-  if (rooms.has(roomName)) {
-    router1 = rooms.get(roomName);
+  await startSocketServer();
 
-  } else {
-     router1 = await worker.createRouter({ mediaCodecs });
-    rooms.set(roomName, router1);
+  await startExpressServer();
 
+  await startHttpServer();
+}
+
+async function startSocketServer() {
+  io.on("connection", async (socket) => {
+    TheRoomHelper = new RoomHelper(socket);
+
+    console.log("\x1b[32m%s\x1b[0m", `NEW CONNECTION: ${socket.id} `);
+
+    await roomEventEventHandler({
+      socket,
+      peers,
+      TheRoomHelper,
+      getOrCreateRoom,
+      Traficrooms,
+      rooms,
+    });
+
+    await mediaSoupEventHandler({
+      socket,
+      peers,
+      TheRoomHelper,
+      Traficrooms,
+      getOrCreateRoom,
+      rooms,
+    });
+  });
+}
+
+async function startExpressServer() {
+  let cors = {
+    cors: {
+      origin: "http://localhost:3000",
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+  };
+
+  if (__prod__) {
+    const privateKey = fs.readFileSync(
+      path.join(__dirname, "ssl/privkey.pem"),
+      "utf8"
+    );
+    const certificate = fs.readFileSync(
+      path.join(__dirname, "ssl/cert.pem"),
+      "utf8"
+    );
+    const ca = fs.readFileSync(path.join(__dirname, "ssl/cert.pem"), "utf8");
+
+    credentials = {
+      key: privateKey,
+      cert: certificate,
+      ca: ca,
+    };
+
+    cors = {};
   }
 
-  return router1;
-};
+  app.get("/imges/:name", function (req, res) {
+    let filename = path.join(__dirname, "src/uploads/", req.params.name);
+    let loadingRoom = path.join(__dirname, "src/uploads/", "loadingRoom.png");
 
-const createTraficRoom = async (roomName) => {
-  let router2;
+    try {
+      if (fs.existsSync(filename)) return res.sendFile(filename);
 
-
-  if (Traficrooms.has(roomName)) {
-
-    router2 = Traficrooms.get(roomName);
-    
-  } else {
-     router2 = await trafficRoomWorker.createRouter({ mediaCodecs });
-
-    Traficrooms.set(roomName, router2);
-
-  }
-
-  return router2;
-};
-createWorker();
-createTrafficWorker();
-
-io.on("connection", async (socket) => {
-
-  TheRoomHelper = new RoomHelper(socket);
-
-  console.log("\x1b[32m%s\x1b[0m", `NEW CONNECTION: ${socket.id} `);
-
-  await roomEventEventHandler({
-    socket,
-   peers,
-   TheRoomHelper,
-  //  producers,
-    createRoom,
-    createTraficRoom,
-    Traficrooms,
-    rooms,
- //   fs,
+      return res.sendFile(loadingRoom);
+    } catch (err) {
+      console.error(err);
+    }
   });
 
-  await mediaSoupEventHandler({
-    socket,
-   peers,
-    TheRoomHelper,
-   // transports,
-   // producers,
-   // consumers,
-   Traficrooms,
-   
-    createRoom,
-    rooms,
-  //  fs,
+  app.use(express.static(path.join(__dirname, "build")));
+
+  app.use((req, res, next) => {
+    res.sendFile(path.join(__dirname, "build", "index.html"));
   });
-});
-
-
-app.use(express.urlencoded({ extended: false }));
-
-app.use(express.json());
-
-app.get("/imges/:name", function (req, res) {
-
-  let filename = path.join(__dirname, "src/uploads/", req.params.name);
-  let loadingRoom = path.join(__dirname, "src/uploads/", "loadingRoom.png");
-  
-  try {
-  
-    if (fs.existsSync(filename)) return res.sendFile(filename);
-
-    return res.sendFile(loadingRoom);
-  
-  } catch (err) {
-  
-    console.error(err);
-  
-  }
-
-});
-
-
-app.use(express.static(path.join(__dirname, "build")));
-
-app.use((req, res, next) => {
-  res.sendFile(path.join(__dirname, "build", "index.html"));
-});
-
-
-http.listen(PORT, () => {
-  console.log("\x1b[33m%s\x1b[0m", `NODEJS SERVER RUNNING ON PORT:${PORT}`);
-});
+}
 
 async function startHttpServer() {
-
   return new Promise((resolve, reject) => {
     http.listen(PORT, () => {
       console.log("\x1b[33m%s\x1b[0m", `HTTP SERVER RUNNING ON PORT:${PORT}`);
       resolve();
     });
   });
+}
 
+async function createWorkers() {
+  let { numWorkers } = config.mediasoup;
+
+  logger.info("running %d mediasoup Workers...", numWorkers);
+  for (let i = 0; i < numWorkers - 1; ++i) {
+    const worker = await mediasoup.createWorker();
+
+    worker.on("died", () => {
+      logger.error(
+        "mediasoup Worker died, exiting  in 2 seconds... [pid:%d]",
+        worker.pid
+      );
+
+      setTimeout(() => process.exit(1), 2000);
+    });
+
+    logger.info(`WORKER START PID:${worker.pid}`);
+
+    mediasoupWorkers.push(worker);
+
+    // Log worker resource usage every X seconds.
+    setInterval(async () => {
+      const usage = await worker.getResourceUsage();
+      const usageTraffic = await trafficRoomWorker.getResourceUsage();
+      const dumpTraffic = await trafficRoomWorker.dump();
+
+      const dump = await worker.dump();
+
+      logger.info(
+        "mediasoup Worker resource usage [pid:%d]: %o",
+        worker.pid,
+        usage
+      );
+
+      logger.info("mediasoup Worker dump [pid:%d]: %o", worker.pid, dump);
+
+      logger.info(
+        "mediasoup Worker resource usage [pid:%d]: %o",
+        trafficRoomWorker.pid,
+        usageTraffic
+      );
+
+      logger.info(
+        "mediasoup Worker dump [pid:%d]: %o",
+        trafficRoomWorker.pid,
+        dumpTraffic
+      );
+    }, 12000);
+  }
+
+  trafficRoomWorker = await mediasoup.createWorker();
+  logger.info(`TRAFFIC WORKER START PID:${trafficRoomWorker.pid}`);
+
+  trafficRoomWorker.on("died", () => {
+    logger.error(
+      "mediasoup Worker died, exiting  in 2 seconds... [pid:%d]",
+      worker.pid
+    );
+
+    setTimeout(() => process.exit(1), 2000);
+  });
+
+  setInterval(async () => {
+    const usageTraffic = await trafficRoomWorker.getResourceUsage();
+    const dumpTraffic = await trafficRoomWorker.dump();
+
+    logger.info(
+      "mediasoup Worker resource usage [pid:%d]: %o",
+      trafficRoomWorker.pid,
+      usageTraffic
+    );
+
+    logger.info(
+      "mediasoup Worker dump [pid:%d]: %o",
+      trafficRoomWorker.pid,
+      dumpTraffic
+    );
+  }, 12000);
+}
+
+async function getOrCreateRoom(roomName, type) {
+  let router;
+  if (type == "traffic") {
+    if (Traficrooms.has(roomName)) {
+      router = Traficrooms.get(roomName);
+    } else {
+      router = await trafficRoomWorker.createRouter({ mediaCodecs });
+
+      Traficrooms.set(roomName, router);
+    }
+
+    return router;
+  }
+
+  if (rooms.has(roomName)) {
+    router = rooms.get(roomName);
+  } else {
+    const worker = getMediasoupWorker();
+    router = await worker.createRouter({ mediaCodecs });
+    rooms.set(roomName, router);
+  }
+
+  return router;
+}
+
+function getMediasoupWorker() {
+  const worker = mediasoupWorkers[nextMediasoupWorkerIdx];
+
+  if (++nextMediasoupWorkerIdx === mediasoupWorkers.length)
+    nextMediasoupWorkerIdx = 0;
+
+  return worker;
 }

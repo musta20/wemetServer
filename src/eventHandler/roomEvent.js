@@ -6,9 +6,7 @@ module.exports = ({
   socket,
   peers,
   TheRoomHelper,
-  createTraficRoom,
-  Traficrooms,
-  createRoom,
+  getOrCreateRoom,
   rooms,
  // fs,
 }) => {
@@ -126,7 +124,7 @@ module.exports = ({
   const createRoomForFristTime = async ({ title, IsPublic }, fun) => {
     TheRoomHelper.LeavAllRooms(socket);
  
-    const router1 = await createRoom(title, socket.id);
+    const router1 = await getOrCreateRoom(title );
  
 
   peers.set(socket.id, {
@@ -176,7 +174,7 @@ module.exports = ({
      
     socket.join(roomName);
 
-    const router1 = await createRoom(roomName, socket.id);
+    const router1 = await getOrCreateRoom(roomName );
 
     peers.set(socket.id,{
       socket,
@@ -240,7 +238,7 @@ module.exports = ({
    //await TheRoomHelper.GetAllUsersInRoom(TraficRoom);
  
 
-    const TraficRoomRouter = await createTraficRoom(TraficRoom);
+    const TraficRoomRouter = await getOrCreateRoom(TraficRoom,'traffic');
 
     peers.set(socket.id , {
       socket,
