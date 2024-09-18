@@ -3,7 +3,7 @@ const fs = require("fs");
 
 module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
   let ajv = new Ajv();
-  //the schema used to valdait the input
+  //the schema used to validate the input
   const schema = {
     properties: {
       name: {
@@ -15,7 +15,7 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
     },
   };
 
-  //this event used to HiddeTheRoom or un Hidde Th eRoom  by the admin
+  //this event used to HiddeTheRoom or un hide Th Room  by the admin
   socket.on("HiddeTheRoom", (room, fun) => {
     const userIsAdmin = peers.get(socket.id);
     if (!userIsAdmin.peerDetails.isAdmin) {
@@ -27,7 +27,7 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
     fun({ status: true, room: "room is unlocked" });
   });
 
-  //chanche the value of isstream buy the room
+  //change the value of isStream buy the room
   socket.on("isStream", (set, fun) => {
     const userAdmin = peers.get(socket.id);
     if (!userAdmin.peerDetails.isAdmin) {
@@ -40,7 +40,7 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
     fun({ status: true, room: "his gone" });
   });
 
-  //chanche the value of IsPublic buy the room
+  //change the value of IsPublic buy the room
   socket.on("IsPublic", (set, fun) => {
     const userAdmin = peers.get(socket.id);
 
@@ -130,11 +130,10 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
 
   const joinExistRoom = async (roomName, fun) => {
      UserId = TheRoomHelper.GenerateUserId(socket.id);
-    //  FullRomeName = TheRoomHelper.GetTheFullRoomName(roomName);
 
     let admin = TheRoomHelper.GetRoomBossId(roomName, peers);
     if (peers.get(admin).peerDetails.isRoomLocked) {
-      // fun({ status: false, room: "the room " + roomName + " is locked " });
+
       watchTheStream(roomName, fun);
       return;
     }
@@ -235,12 +234,13 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
   };
 
   /*
-  this the frist event user call when intering the room
-  1-when reving the room name it will vladit it
-  2-chek if the room not excit it will create it and set you as admin
-  3-if the room excist will try to join it 
-  4-if the room not setreamed will not join and just send you to hom page
-  5-if the room is locked it will not allow user to join and the user becam just viewr
+  *** This the first event user call when entering the room 
+
+  1-when receive the room name it will validate it
+  2-check if the room not exist it will create it and set you as admin
+  3-if the room exist it will try to join it 
+  4-if the room not streamed will not join and just send you to home page
+  5-if the room is locked it will not allow user to join and the user become just watcher
   */
 
   socket.on("CreateStream", async (roomProps, fun) => {
@@ -282,7 +282,7 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
     watchTheStream(roomName, fun);
   });
 
-  //this event save the imge sent by the user as thumnal for live room
+  //this event save the image sent by the user as thumbnail for the live room
   socket.on("saveimg", async (img, fun) => {
     let base64Data = img.replace(/^data:image\/png;base64,/, "");
 
@@ -309,13 +309,13 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
     fun(rroommss);
   });
 
-  //the event take a privet message from user and frowrd it to specifc user
+  //the event take a privet message from user and forward it to specific user
   socket.on("SendPrivetMessage", (id, fun) => {
     socket.to(id.id).emit("PrivetMessage", { Message: id.Message });
     fun({ status: true, room: "message sent" });
   });
 
-  //the event take a  message and brodcast it to the room
+  //the event take a  message and broadcast it to the room
   socket.on("Message", (room, Message) => {
 
     socket

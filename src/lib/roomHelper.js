@@ -16,18 +16,20 @@ class RoomHelper {
     this.room = new Map();
   }
 
-  //this function create a name for the viewr
+  //This function create a name for the viewer
   GenerateRoomeTrafic(id) {
      return "traffic@" + id;
   }
 
-  //get the user id
+
+
+  //Get the user id
   GenerateUserId(username) {
 
     return username;
   }
 
-  //this function will check if the room is public or not
+  //This function will check if the room is public or not
   IsPublic(room, peers) {
     for (const [, peer] of peers) {
       if (peer.peerDetails.isAdmin && peer.roomName === room) {
@@ -37,7 +39,7 @@ class RoomHelper {
     return false;
   }
 
-  //this function will return thr current live rooms names
+  //This function will return the current live rooms names
   GetRoomsNames(peers) {
     let rooms = this.socket.adapter.rooms;
     let publicRoomTitles = [];
@@ -57,16 +59,14 @@ class RoomHelper {
     return publicRoomTitles;
   }
 
-  //this function will return thr current live rooms names
+  //This function will return the current live rooms names
   GetAllUsersInRoom(room) {
     const fetchSockets = this.socket.in(room).fetchSockets();
 
     return fetchSockets;
   }
 
-  //this function extract the room info and build the room name
-
-  //get the room admin id
+  //Get the room admin id
   GetRoomBossId(room, peers) {
     for (const [peerId, peer] of peers) {
       if (peer.roomName === room && peer.peerDetails.isAdmin === true) {
@@ -76,13 +76,13 @@ class RoomHelper {
     return undefined;
   }
 
-  //chekc if the room exist
+  //Check if the room exist
   IsRoomExist(room) {
     const rooms = this.socket.adapter.rooms;
     return rooms.has(room);
   }
 
-  //chekc if room is fully acoupy
+  //Check if room is full
   IsRoomFull(room) {
     try {
       if (this.socket.in(room).fetchSockets.length >= 5) {
@@ -93,12 +93,12 @@ class RoomHelper {
     return false;
   }
 
-  //get the room name iam i
+  //Get the current room name 
   GetRoomsIamIn(socket) {
     return socket.rooms;
   }
 
-  //quit all room iam connected to
+  //Quit all room iam connected to
   LeavAllRooms(socket) {
     return new Promise((resolve) => {
       const rooms = Array.from(socket.rooms);

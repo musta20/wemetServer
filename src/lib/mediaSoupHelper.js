@@ -5,7 +5,7 @@ const logger = new Logger();
 
 const mediaSoupHelper = ({ socket, peers }) => {
   /*
-  this function called to tell all users in the room
+  This function called to tell all users in the room
   that there is a new user just joined the room
   and it take his socket id and producer id as is
   and the room name 
@@ -18,8 +18,8 @@ const mediaSoupHelper = ({ socket, peers }) => {
   };
 
   /*
-  this function called to tell all users in the 
-  viewr room that there a new user joined the 
+  This function called to tell all users in the 
+  viewer room that there a new user joined the 
   live room 
   */
   informViewrs = (roomName, id, socketId) => {
@@ -30,14 +30,14 @@ const mediaSoupHelper = ({ socket, peers }) => {
     logger.info(`user joined, id ${id} ${roomName}, ${socketId}`);
   };
 
-  //this function called to save a producer to the producer array
+  //This function called to save a producer to the producer array
   addProducer = (producer) => {
     peers.get(socket.id).producers.set(producer.id, producer);
 
     logger.info("\x1b[33m%s\x1b[0m", `producer added ${producer.id} `);
   };
 
-  //this function addConsumer to save a addConsumer to the producer array
+  //This function addConsumer to save a addConsumer to the producer array
   addConsumer = (consumer, roomName) => {
     peers.get(socket.id).consumers.set(consumer.id, consumer);
   };
@@ -66,7 +66,7 @@ const mediaSoupHelper = ({ socket, peers }) => {
     }
   };
 
-  //this function the client call to create webrtc transport
+  //This function the client call to create webrtc transport
   createWebRtcTransport = async (router) => {
     return new Promise(async (resolve, reject) => {
       try {
@@ -105,7 +105,7 @@ const mediaSoupHelper = ({ socket, peers }) => {
     });
   };
 
-  //this function used to get specifc producerTransport
+  //This function used to get specific producerTransport
   getTransport = (socketId) => {
     const transport = peers.get(socketId).transports;
 
@@ -122,7 +122,7 @@ const mediaSoupHelper = ({ socket, peers }) => {
     return returnProducerTransport;
   };
 
-  //this function addTransport save transport to the Transport array
+  //This function addTransport save transport to the Transport array
   addTransport = (transport, roomName, consumer) => {
     peers.get(socket.id).transports.set(transport.id, transport);
   };

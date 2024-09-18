@@ -31,7 +31,11 @@ module.exports = async ({
     socket.leave(TheroomName);
   });
 
-  //when the user disconnected this event whill close all producer /consumer
+  
+  /*
+    When the user disconnected this event will close all producer / consumer
+  */
+  
   socket.on("disconnect", async () => {
     disConnectPeer(socket.id);
 
@@ -50,7 +54,6 @@ module.exports = async ({
             logger.error(err);
             return;
           }
-          //file removed
         });
       }
 
@@ -58,7 +61,6 @@ module.exports = async ({
         rooms?.get(TheroomName)?.close();
       }
 
-      // return;
     }
 
     if (peers.get(socket.id)?.peerDetails?.isAdmin) {
@@ -105,7 +107,10 @@ module.exports = async ({
     peers.delete(socket.id);
   });
 
-  //asking the server to resv a specifc transport
+  /*
+    Asking the server to receive a specific transport
+  */
+
   socket.on(
     "consume",
     async (
@@ -168,8 +173,10 @@ module.exports = async ({
 
           addConsumer(consumer, user.roomName);
 
-          // from the consumer extract the following params
-          // to send back to the Client
+          /*
+           From the consumer extract the following params 
+           to send back to the Client
+          */
           const params = {
             id: consumer.id,
             producerId: remoteProducerId,
@@ -192,12 +199,14 @@ module.exports = async ({
     }
   );
 
-  // start consumeing the serverconsumeroid
+  /* Start consuming the server consumer id */
+
   socket.on("consumer-resume", async ({ serverConsumerId }) => {
     await peers.get(socket.id).consumers.get(serverConsumerId).resume();
   });
 
-  //the event will reterun back to the user the currnt produsers in the room
+  /* This event will return back to the user the current producers in the room */ 
+
   socket.on("getProducers", ({ isViewr, roomName }, callback) => {
     let producerList = [];
 
@@ -208,11 +217,12 @@ module.exports = async ({
         }
       }
     }
-    // return the producer list back to the client
+    /* Return the producer list back to the client */
     callback(producerList);
   });
 
-  //this event a user called to create wenrtctransport  send/resv
+  /* This event sent by clint  to create webrtcTransport  send/resv */
+
   socket.on("createWebRtcTransport", async ({ consumer }, callback) => {
     const roomName = peers.get(socket.id).roomName;
 
@@ -240,7 +250,8 @@ module.exports = async ({
     );
   });
 
-  //this event check wither the room is abvalple to join
+  /* This event check if the room is available to join */
+
   socket.on("isFreeToJoin", ({ roomName }, fun) => {
     if ((roomName, socket)) {
       fun({ status: false });
@@ -249,7 +260,7 @@ module.exports = async ({
     }
   });
 
-  //this event connect a user transport  to server transport
+   /* This event connect a user transport  to server transport */
   socket.on("transport-connect", ({ dtlsParameters }) => {
     try {
       getTransport(socket.id).connect({ dtlsParameters });
@@ -258,7 +269,7 @@ module.exports = async ({
     }
   });
 
-  //in this event the user start producing stream to the server
+  /* In this event the user start producing stream to the server */
   socket.on(
     "transport-produce",
     async ({ kind, rtpParameters, appData }, callback) => {
@@ -274,11 +285,12 @@ module.exports = async ({
 
       addProducer(producer, roomName);
 
-      let TraficRoom = TheRoomHelper.GetTheFullRoomName(roomName);
+      let TraficRoom = TheRoomHelper.GenerateRoomeTrafic(roomName);
 
-      let router1 = rooms.get(roomName);
 
-      if (rooms.has(TraficRoom)) {
+      if (Traficrooms.has(TraficRoom)) {
+        let router1 = rooms.get(roomName);
+
         let router2 = Traficrooms.get(TraficRoom);
 
         await router1.pipeToRouter({
@@ -303,7 +315,7 @@ module.exports = async ({
     }
   );
 
-  //in this event the user ask the server to recv a stram from the specifc server consumer transport
+  /* This event clint ask the server to recv a stream from the specific server consumer transport */
   socket.on(
     "transport-recv-connect",
     async ({ dtlsParameters, serverConsumerTransportId }) => {
