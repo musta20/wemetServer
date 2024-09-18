@@ -1,19 +1,15 @@
 const Logger = require("../lib/Logger");
 const mediaSoupHelper = require("../lib/mediaSoupHelper");
-
+const logger = new Logger();
 const fs = require("fs");
-
 
 module.exports = async ({
   socket,
   peers,
   TheRoomHelper,
   Traficrooms,
-  rooms
- 
+  rooms,
 }) => {
-
- 
   const {
     addTransport,
     getTransport,
@@ -25,41 +21,33 @@ module.exports = async ({
     informConsumers,
   } = await mediaSoupHelper({
     socket,
-    peers
+    peers,
   });
 
-
-
   socket.on("leave", (name) => {
-
     disConnectPeer(socket.id);
 
     let TheroomName = peers.get(socket.id)?.roomName;
     socket.leave(TheroomName);
-
   });
 
   //when the user disconnected this event whill close all producer /consumer
   socket.on("disconnect", async () => {
     disConnectPeer(socket.id);
- 
 
     let TheroomName = peers.get(socket.id)?.roomName;
 
- 
     if (!TheroomName) return;
 
     if (!TheRoomHelper.IsRoomExist(TheroomName, socket)) {
-
       if (TheroomName !== "mainrrom" && !TheroomName.includes("@")) {
-
-        rooms?.get(TheroomName)?.close()
+        rooms?.get(TheroomName)?.close();
 
         socket.to("mainrrom").emit("DelteRoom", { TheroomName });
 
-        fs.unlink("src/uploads/" + TheroomName + ".png", (err) => {
+       await fs.unlink("src/uploads/" + TheroomName + ".png", (err) => {
           if (err) {
-            console.error(err);
+            logger.error(err);
             return;
           }
           //file removed
@@ -67,26 +55,20 @@ module.exports = async ({
       }
 
       if (TheroomName !== "mainrrom" && TheroomName.includes("@")) {
-        rooms?.get(TheroomName)?.close()
-
+        rooms?.get(TheroomName)?.close();
       }
-      
+
       // return;
     }
 
- 
-
     if (peers.get(socket.id)?.peerDetails?.isAdmin) {
       if (TheroomName !== null) {
-
         if (!TheroomName) return;
 
-        let clients = socket.adapter.rooms.get(TheroomName)
-    
-        
+        let clients = socket.adapter.rooms.get(TheroomName);
+
         if (!clients) return;
         const [first] = clients;
-     
 
         if (clients.length !== 0) {
           const newAdmin = peers.get(first);
@@ -94,14 +76,11 @@ module.exports = async ({
           newAdmin.peerDetails.isAdmin = true;
 
           newAdmin.peerDetails.isRoomLocked =
-          currentAdmin.peerDetails.isRoomLocked;
+            currentAdmin.peerDetails.isRoomLocked;
 
-            newAdmin.peerDetails.IsPublic =
-            currentAdmin.peerDetails.IsPublic;
+          newAdmin.peerDetails.IsPublic = currentAdmin.peerDetails.IsPublic;
 
-            newAdmin.peerDetails.isStream =
-            currentAdmin.peerDetails.isStream;
-
+          newAdmin.peerDetails.isStream = currentAdmin.peerDetails.isStream;
 
           socket.to(first).emit("switchAdminSetting", {
             isRoomLocked: currentAdmin.peerDetails.isRoomLocked,
@@ -118,12 +97,12 @@ module.exports = async ({
     }
 
     if (TheroomName) {
-      socket.to(TheRoomHelper.GenerateRoomeTrafic(TheroomName)).emit("FreeToJoin", { status: true });
+      socket
+        .to(TheRoomHelper.GenerateRoomeTrafic(TheroomName))
+        .emit("FreeToJoin", { status: true });
     }
 
-     peers.delete(socket.id);
-
-
+    peers.delete(socket.id);
   });
 
   //asking the server to resv a specifc transport
@@ -133,46 +112,38 @@ module.exports = async ({
       { rtpCapabilities, remoteProducerId, serverConsumerTransportId },
       callback
     ) => {
-
       let usocketId;
       try {
+        const user = peers.get(socket.id);
 
-        const user  = peers.get(socket.id);
+        const router = user.roomName.startsWith("traffic@")
+          ? Traficrooms.get(user.roomName)
+          : rooms.get(user.roomName);
 
-        const router = user.roomName.startsWith("traffic@") ? Traficrooms.get(user.roomName) : rooms.get(user.roomName);
+        const consumerTransport = user.transports.get(
+          serverConsumerTransportId
+        );
 
-        const consumerTransport = user.transports.get(serverConsumerTransportId);
+        const mainUserRoomName = user.roomName.startsWith("traffic@")
+          ? user.roomName.slice(8)
+          : user.roomName;
 
-        const mainUserRoomName = user.roomName.startsWith("traffic@") ? user.roomName.slice(8) : user.roomName;
-
-        for(const [index, userPeer] of peers) {
-
-          if(userPeer.roomName === mainUserRoomName) {
-            
-            for(const [, producer] of userPeer.producers) {
-              if(producer.id === remoteProducerId) {
-                 usocketId = index;
+        for (const [index, userPeer] of peers) {
+          if (userPeer.roomName === mainUserRoomName) {
+            for (const [, producer] of userPeer.producers) {
+              if (producer.id === remoteProducerId) {
+                usocketId = index;
               }
-              
+            }
           }
-
         }
 
-        
-  
-        
-        }
-  
- 
-
-        if (router.canConsume({
+        if (
+          router.canConsume({
             producerId: remoteProducerId,
             rtpCapabilities,
           })
-        ) 
-        {
-
-     
+        ) {
           const consumer = await consumerTransport.consume({
             producerId: remoteProducerId,
             rtpCapabilities,
@@ -180,34 +151,22 @@ module.exports = async ({
           });
 
           consumer.on("transportclose", () => {
-
- 
             socket.emit("transportclose", {
-
               remoteProducerId: remoteProducerId,
-              
-              socketId: usocketId
 
+              socketId: usocketId,
             });
-
           });
 
           consumer.on("producerclose", () => {
-
-           socket.emit("producer-closed", {
-
+            socket.emit("producer-closed", {
               remoteProducerId: remoteProducerId,
-              
-              socketId:  usocketId
 
+              socketId: usocketId,
             });
-
-   
           });
 
-
-
-           addConsumer(consumer, user.roomName);
+          addConsumer(consumer, user.roomName);
 
           // from the consumer extract the following params
           // to send back to the Client
@@ -223,7 +182,7 @@ module.exports = async ({
           callback({ params });
         }
       } catch (error) {
-        Logger.error(error);
+        logger.error(error);
         callback({
           params: {
             error: error,
@@ -235,47 +194,32 @@ module.exports = async ({
 
   // start consumeing the serverconsumeroid
   socket.on("consumer-resume", async ({ serverConsumerId }) => {
- 
-   await peers.get(socket.id).consumers.get(serverConsumerId).resume();
- 
+    await peers.get(socket.id).consumers.get(serverConsumerId).resume();
   });
 
   //the event will reterun back to the user the currnt produsers in the room
   socket.on("getProducers", ({ isViewr, roomName }, callback) => {
- 
-      
-    let producerList =[];
- 
+    let producerList = [];
 
-  for(const [id,peer] of peers){
-     if(peer.roomName === roomName  &&
-      id !== socket.id
-
-     ){
-      for(const [producerId,producer] of peer.producers){
-         producerList = [
-          ...producerList,
-          [producerId, id],
-        ]
+    for (const [id, peer] of peers) {
+      if (peer.roomName === roomName && id !== socket.id) {
+        for (const [producerId, producer] of peer.producers) {
+          producerList = [...producerList, [producerId, id]];
+        }
       }
-  
-  }
-}
+    }
     // return the producer list back to the client
     callback(producerList);
   });
 
   //this event a user called to create wenrtctransport  send/resv
   socket.on("createWebRtcTransport", async ({ consumer }, callback) => {
-
-    
     const roomName = peers.get(socket.id).roomName;
 
-   
-      const router = roomName.startsWith("traffic@") ? Traficrooms.get(roomName) : rooms.get(roomName);
+    const router = roomName.startsWith("traffic@")
+      ? Traficrooms.get(roomName)
+      : rooms.get(roomName);
 
-     
-    
     createWebRtcTransport(router).then(
       (transport) => {
         callback({
@@ -291,17 +235,14 @@ module.exports = async ({
         addTransport(transport, roomName, consumer);
       },
       (error) => {
-        Logger.error(error);
+        logger.error(error);
       }
     );
   });
 
   //this event check wither the room is abvalple to join
   socket.on("isFreeToJoin", ({ roomName }, fun) => {
-
-    
-    if ( roomName, socket)
-       {
+    if ((roomName, socket)) {
       fun({ status: false });
     } else {
       fun({ status: true });
@@ -310,10 +251,10 @@ module.exports = async ({
 
   //this event connect a user transport  to server transport
   socket.on("transport-connect", ({ dtlsParameters }) => {
-     try {
+    try {
       getTransport(socket.id).connect({ dtlsParameters });
     } catch (e) {
-      Logger.error(e);
+      logger.error(e);
     }
   });
 
@@ -350,17 +291,14 @@ module.exports = async ({
 
       informViewrs(TraficRoom, producer.id, socket.id);
 
-
       producer.on("transportclose", () => {
-      
         producer.close();
       });
-      let peersInRoom =  await TheRoomHelper.GetAllUsersInRoom(roomName);
+      let peersInRoom = await TheRoomHelper.GetAllUsersInRoom(roomName);
 
-      
       callback({
         id: producer.id,
-        producersExist:  peersInRoom.length >= 1 ? true : false,
+        producersExist: peersInRoom.length >= 1 ? true : false,
       });
     }
   );
@@ -369,21 +307,14 @@ module.exports = async ({
   socket.on(
     "transport-recv-connect",
     async ({ dtlsParameters, serverConsumerTransportId }) => {
-
-       try {
-       for( const [ id,transportData] of peers.get(socket.id).transports){
-
-          if( transportData.consumers.size &&
-             id == serverConsumerTransportId )
-             {
-              transportData.connect({ dtlsParameters });
-          
-
-             }
-       }
-
+      try {
+        for (const [id, transportData] of peers.get(socket.id).transports) {
+          if (transportData.consumers.size && id == serverConsumerTransportId) {
+            transportData.connect({ dtlsParameters });
+          }
+        }
       } catch (e) {
-        Logger.error(e);
+        logger.error(e);
       }
     }
   );

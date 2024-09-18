@@ -1,3 +1,6 @@
+const Logger = require("./Logger");
+
+const logger = new Logger();
 class RoomHelper {
   constructor(socket) {
     this.GetRoomsNames = this.GetRoomsNames.bind(this);
@@ -46,7 +49,7 @@ class RoomHelper {
             publicRoomTitles.push(roomKey);
           }
         } catch (error) {
-          console.error(`Error parsing room key: ${roomKey}`, error);
+          logger.error(`Error parsing room key: ${roomKey}`, error);
         }
       }
     }
