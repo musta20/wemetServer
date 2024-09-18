@@ -17,14 +17,14 @@ module.exports =
 	// Signaling settings (protoo WebSocket server and HTTP API server).
 	https  :
 	{
-		listenIp   : '0.0.0.0',
+		listenIp   : 'localhost',
 		// NOTE: Don't change listenPort (client app assumes 4443).
-		listenPort : process.env.PROTOO_LISTEN_PORT || 4443,
+		listenPort : process.env.WEMET_SERVER_PORT || 6800,
 		// NOTE: Set your own valid certificate files.
 		tls        :
 		{
-			cert : process.env.HTTPS_CERT_FULLCHAIN || `${__dirname}/certs/fullchain.pem`,
-			key  : process.env.HTTPS_CERT_PRIVKEY || `${__dirname}/certs/privkey.pem`
+			cert : process.env.HTTPS_CERT_FULLCHAIN || `${__dirname}/../ssl/cert.pem`,
+			key  : process.env.HTTPS_CERT_PRIVKEY || `${__dirname}/../ssl/localhost.pem`
 		}
 	},
 	// mediasoup settings.

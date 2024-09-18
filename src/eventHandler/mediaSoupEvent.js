@@ -1,3 +1,4 @@
+const Logger = require("../lib/Logger");
 const mediaSoupHelper = require("../lib/mediaSoupHelper");
 
 const fs = require("fs");
@@ -8,9 +9,6 @@ module.exports = async ({
   peers,
   TheRoomHelper,
   Traficrooms,
-  transports,
-  producers,
-  consumers,
   rooms
  
 }) => {
@@ -27,18 +25,13 @@ module.exports = async ({
     informConsumers,
   } = await mediaSoupHelper({
     socket,
-    peers,
-    transports,
-    producers,
-    consumers,
-    Traficrooms,
-    TheRoomHelper,
+    peers
   });
 
 
 
   socket.on("leave", (name) => {
-    console.log('THE EVENT OF LEAVGIN THE ROOM IS TRIGGERD');
+
     disConnectPeer(socket.id);
 
     let TheroomName = peers.get(socket.id)?.roomName;
@@ -52,7 +45,6 @@ module.exports = async ({
  
 
     let TheroomName = peers.get(socket.id)?.roomName;
-   // console.log("\x1b[33m%s\x1b[0m", `Show the ROOM IAM GETTING OUT OF`);
 
  
     if (!TheroomName) return;
@@ -90,7 +82,6 @@ module.exports = async ({
         if (!TheroomName) return;
 
         let clients = socket.adapter.rooms.get(TheroomName)
-        console.log("\x1b[33m%s\x1b[0m", `show the clients`);
     
         
         if (!clients) return;
@@ -98,23 +89,24 @@ module.exports = async ({
      
 
         if (clients.length !== 0) {
-          peers.get(first).peerDetails.isAdmin = true;
+          const newAdmin = peers.get(first);
+          const currentAdmin = peers.get(socket.id);
+          newAdmin.peerDetails.isAdmin = true;
 
-          peers.get(first).peerDetails.isRoomLocked =
-            peers.get(socket.id).peerDetails.isRoomLocked;
+          newAdmin.peerDetails.isRoomLocked =
+          currentAdmin.peerDetails.isRoomLocked;
 
-            peers.get(first).peerDetails.IsPublic =
-            peers.get(socket.id).peerDetails.IsPublic;
+            newAdmin.peerDetails.IsPublic =
+            currentAdmin.peerDetails.IsPublic;
 
-          peers.get(first).peerDetails.isStream =
-            peers.get(socket.id).peerDetails.isStream;
+            newAdmin.peerDetails.isStream =
+            currentAdmin.peerDetails.isStream;
 
-        //  console.log("admin switched");
 
           socket.to(first).emit("switchAdminSetting", {
-            isRoomLocked: peers.get(socket.id).peerDetails.isRoomLocked,
-            isStream: peers.get(socket.id).peerDetails.isStream,
-            IsPublic: peers.get(socket.id).peerDetails.IsPublic,
+            isRoomLocked: currentAdmin.peerDetails.isRoomLocked,
+            isStream: currentAdmin.peerDetails.isStream,
+            IsPublic: currentAdmin.peerDetails.IsPublic,
           });
           socket.to(TheroomName).emit("switchAdmin", { admin: first });
 
@@ -128,8 +120,6 @@ module.exports = async ({
     if (TheroomName) {
       socket.to(TheRoomHelper.GenerateRoomeTrafic(TheroomName)).emit("FreeToJoin", { status: true });
     }
-
-   // const roomName  = peers.get(socket.id).roomName;
 
      peers.delete(socket.id);
 
@@ -204,10 +194,6 @@ module.exports = async ({
 
           consumer.on("producerclose", () => {
 
-            console.log("\x1b[31m%s\x1b[0m", `producer of consumer closed ` + user.roomName);
-           // socket.emit("producerclosed", {data:"producer of consumer closed"});
-      
-
            socket.emit("producer-closed", {
 
               remoteProducerId: remoteProducerId,
@@ -237,7 +223,7 @@ module.exports = async ({
           callback({ params });
         }
       } catch (error) {
-        console.log(error);
+        Logger.error(error);
         callback({
           params: {
             error: error,
@@ -281,14 +267,10 @@ module.exports = async ({
 
   //this event a user called to create wenrtctransport  send/resv
   socket.on("createWebRtcTransport", async ({ consumer }, callback) => {
-    // get Room Name from Peer's properties
-    //console.log(peers[socket.id])
+
     
     const roomName = peers.get(socket.id).roomName;
 
-    // get Router (Room) object this peer is in based on RoomName
-    // console.log(roomName)
-    // console.log( peers[socket.id])
    
       const router = roomName.startsWith("traffic@") ? Traficrooms.get(roomName) : rooms.get(roomName);
 
@@ -309,17 +291,15 @@ module.exports = async ({
         addTransport(transport, roomName, consumer);
       },
       (error) => {
-        console.log(error);
+        Logger.error(error);
       }
     );
   });
 
   //this event check wither the room is abvalple to join
   socket.on("isFreeToJoin", ({ roomName }, fun) => {
-   // const GetTheStringFullRoomName =
-    // TheRoomHelper.GetTheStringFullRoomName(roomName);
-    //console.log(GetTheStringFullRoomName)
 
+    
     if ( roomName, socket)
        {
       fun({ status: false });
@@ -330,11 +310,10 @@ module.exports = async ({
 
   //this event connect a user transport  to server transport
   socket.on("transport-connect", ({ dtlsParameters }) => {
-    //console.log('DTLS PARAMS... ', { dtlsParameters })
-    try {
+     try {
       getTransport(socket.id).connect({ dtlsParameters });
     } catch (e) {
-      console.log(e);
+      Logger.error(e);
     }
   });
 
@@ -371,17 +350,14 @@ module.exports = async ({
 
       informViewrs(TraficRoom, producer.id, socket.id);
 
-      //console.log('Producer ID: ', producer.id, producer.kind)
 
       producer.on("transportclose", () => {
-        //console.log('transport for this producer closed ')
-     //  console.log("\x1b[31m%s\x1b[0m", `transportclose`);
-
+      
         producer.close();
       });
       let peersInRoom =  await TheRoomHelper.GetAllUsersInRoom(roomName);
-     // console.log(roomName+"  peersInRoom",peersInRoom)
-      // Send back to the client the Producer's id
+
+      
       callback({
         id: producer.id,
         producersExist:  peersInRoom.length >= 1 ? true : false,
@@ -393,10 +369,6 @@ module.exports = async ({
   socket.on(
     "transport-recv-connect",
     async ({ dtlsParameters, serverConsumerTransportId }) => {
-      //console.log(`DTLS PARAMS: ${dtlsParameters}`)
-      //console.log("ITHECK THE ERORR MY BE HABINGIN HERE",serverConsumerTransportId);
-
-      
 
        try {
        for( const [ id,transportData] of peers.get(socket.id).transports){
@@ -411,7 +383,7 @@ module.exports = async ({
        }
 
       } catch (e) {
-        console.log(e);
+        Logger.error(e);
       }
     }
   );

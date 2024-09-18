@@ -7,22 +7,20 @@ const __prod__ = require("./constants");
 const express = require("express");
 const Logger = require("./src/lib/Logger");
 const { RoomHelper } = require("./src/lib/roomHelper");
-const mediaSoupHelper = require("./src/lib/mediaSoupHelper");
-const mediaSoupCli = require("mediasoup-cli");
-const https = require("https");
+ const mediaSoupCli = require("mediasoup-cli");
 const app = express();
-const Http = __prod__ ? require("httpolyglot") : require("http");
+const utils = require("./src/lib/utils");
+
+const Http = __prod__ ? require("https") : require("http");
 const fs = require("fs");
 const path = require("path");
-const PORT = process.env.WEMET_SERVER_PORT || 6800;
 const mediasoup = require("mediasoup");
 
 const mediaSoupEventHandler = require("./src/eventHandler/mediaSoupEvent");
 const roomEventEventHandler = require("./src/eventHandler/roomEvent");
+let nextMediasoupWorkerIdx = 0;
 
-const http = Http.createServer(app);
-
-const io = require("socket.io")(http);
+const { Server } = require("socket.io");
 
 const config = require("./src/config");
 
@@ -35,51 +33,45 @@ let trafficRoomWorker;
 let rooms = new Map();
 let Traficrooms = new Map();
 let peers = new Map();
-
+let httpsServer;
 const logger = new Logger();
 
 const mediasoupWorkers = [];
+
+const { mediaCodecs } = config.mediasoup.routerOptions;
 
 let TheRoomHelper;
 
 mediaSoupCli.observer(mediasoup);
 
-let credentials = {};
-
-const mediaCodecs = [
-  {
-    kind: "audio",
-    mimeType: "audio/opus",
-    clockRate: 48000,
-    channels: 2,
-  },
-  {
-    kind: "video",
-    mimeType: "video/VP8",
-    clockRate: 90000,
-    parameters: {
-      "x-google-start-bitrate": 1000,
-    },
-  },
-];
-
 main();
 
 async function main() {
-  await createWorkers();
-
-  await startSocketServer();
 
   await startExpressServer();
 
   await startHttpServer();
+
+  await startSocketServer();
+
+  await createWorkers();
+
 }
 
 async function startSocketServer() {
-  io.on("connection", async (socket) => {
+  const socketSwerver = new Server(httpsServer, {
+    cors: {
+      origin: "http://localhost:3000",
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+  });
+
+  logger.info("\x1b[32m%s\x1b[0m", `START SOCKET SERVER `);
+
+  socketSwerver.on("connection", async (socket) => {
     TheRoomHelper = new RoomHelper(socket);
 
-    console.log("\x1b[32m%s\x1b[0m", `NEW CONNECTION: ${socket.id} `);
 
     await roomEventEventHandler({
       socket,
@@ -102,33 +94,6 @@ async function startSocketServer() {
 }
 
 async function startExpressServer() {
-  let cors = {
-    cors: {
-      origin: "http://localhost:3000",
-      methods: ["GET", "POST"],
-      credentials: true,
-    },
-  };
-
-  if (__prod__) {
-    const privateKey = fs.readFileSync(
-      path.join(__dirname, "ssl/privkey.pem"),
-      "utf8"
-    );
-    const certificate = fs.readFileSync(
-      path.join(__dirname, "ssl/cert.pem"),
-      "utf8"
-    );
-    const ca = fs.readFileSync(path.join(__dirname, "ssl/cert.pem"), "utf8");
-
-    credentials = {
-      key: privateKey,
-      cert: certificate,
-      ca: ca,
-    };
-
-    cors = {};
-  }
 
   app.get("/imges/:name", function (req, res) {
     let filename = path.join(__dirname, "src/uploads/", req.params.name);
@@ -139,7 +104,7 @@ async function startExpressServer() {
 
       return res.sendFile(loadingRoom);
     } catch (err) {
-      console.error(err);
+      Logger.error(err);
     }
   });
 
@@ -151,12 +116,25 @@ async function startExpressServer() {
 }
 
 async function startHttpServer() {
-  return new Promise((resolve, reject) => {
-    http.listen(PORT, () => {
-      console.log("\x1b[33m%s\x1b[0m", `HTTP SERVER RUNNING ON PORT:${PORT}`);
-      resolve();
-    });
+
+  logger.info("running an HTTPS server...");
+
+  // HTTPS server for the protoo WebSocket server.
+  const tls = {
+    cert: fs.readFileSync(config.https.tls.cert),
+    key: fs.readFileSync(config.https.tls.key),
+  };
+  
+   httpsServer = __prod__ ? Http.createServer(tls, app) : Http.createServer(app);
+
+  await new Promise((resolve) => {
+    httpsServer.listen(
+      Number(config.https.listenPort),
+      config.https.listenIp,
+      resolve
+    );
   });
+  
 }
 
 async function createWorkers() {
@@ -164,7 +142,14 @@ async function createWorkers() {
 
   logger.info("running %d mediasoup Workers...", numWorkers);
   for (let i = 0; i < numWorkers - 1; ++i) {
-    const worker = await mediasoup.createWorker();
+    const worker = await mediasoup.createWorker({
+      //dtlsCertificateFile : config.mediasoup.workerSettings.dtlsCertificateFile,
+      //dtlsPrivateKeyFile  : config.mediasoup.workerSettings.dtlsPrivateKeyFile,
+      logLevel: config.mediasoup.workerSettings.logLevel,
+      logTags: config.mediasoup.workerSettings.logTags,
+      rtcMinPort: Number(config.mediasoup.workerSettings.rtcMinPort),
+      rtcMaxPort: Number(config.mediasoup.workerSettings.rtcMaxPort),
+    });
 
     worker.on("died", () => {
       logger.error(
@@ -176,6 +161,23 @@ async function createWorkers() {
     });
 
     logger.info(`WORKER START PID:${worker.pid}`);
+    if (process.env.MEDIASOUP_USE_WEBRTC_SERVER !== "false") {
+      // Each mediasoup Worker will run its own WebRtcServer, so those cannot
+      // share the same listening ports. Hence we increase the value in config.js
+      // for each Worker.
+      const webRtcServerOptions = utils.clone(
+        config.mediasoup.webRtcServerOptions
+      );
+      const portIncrement = mediasoupWorkers.length - 1;
+
+      for (const listenInfo of webRtcServerOptions.listenInfos) {
+        listenInfo.port += portIncrement;
+      }
+
+      const webRtcServer = await worker.createWebRtcServer(webRtcServerOptions);
+
+      worker.appData.webRtcServer = webRtcServer;
+    }
 
     mediasoupWorkers.push(worker);
 
@@ -209,7 +211,35 @@ async function createWorkers() {
     }, 12000);
   }
 
-  trafficRoomWorker = await mediasoup.createWorker();
+  trafficRoomWorker = await mediasoup.createWorker({
+    //dtlsCertificateFile : config.mediasoup.workerSettings.dtlsCertificateFile,
+    //dtlsPrivateKeyFile  : config.mediasoup.workerSettings.dtlsPrivateKeyFile,
+    logLevel: config.mediasoup.workerSettings.logLevel,
+    logTags: config.mediasoup.workerSettings.logTags,
+    rtcMinPort: Number(config.mediasoup.workerSettings.rtcMinPort),
+    rtcMaxPort: Number(config.mediasoup.workerSettings.rtcMaxPort),
+  });
+
+  if (process.env.MEDIASOUP_USE_WEBRTC_SERVER !== "false") {
+    // Each mediasoup Worker will run its own WebRtcServer, so those cannot
+    // share the same listening ports. Hence we increase the value in config.js
+    // for each Worker.
+    const webRtcServerOptions = utils.clone(
+      config.mediasoup.webRtcServerOptions
+    );
+    const portIncrement = mediasoupWorkers.length - 1;
+
+    for (const listenInfo of webRtcServerOptions.listenInfos) {
+      listenInfo.port += portIncrement;
+    }
+
+    const webRtcServer = await trafficRoomWorker.createWebRtcServer(
+      webRtcServerOptions
+    );
+
+    trafficRoomWorker.appData.webRtcServer = webRtcServer;
+  }
+
   logger.info(`TRAFFIC WORKER START PID:${trafficRoomWorker.pid}`);
 
   trafficRoomWorker.on("died", () => {
