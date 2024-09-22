@@ -55,8 +55,8 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
   });
 
   //this check if the room Exist
-  socket.on("IsRommeExist", (room, fun) => {
-    if (!TheRoomHelper.IsRoomExist(room, socket)) {
+  socket.on("IsRoomExist", (room, fun) => {
+     if (!TheRoomHelper.IsRoomExist(room, socket)) {
       fun({ status: true, room: room });
       return;
     }
@@ -82,7 +82,7 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
   });
 
   //this event ban user from the room by the admin
-  socket.on("kik", ({ userId }, fun) => {
+  socket.on("banUser", ({ userId }, fun) => {
     const userAdmin = peers.get(socket.id);
     if (!userAdmin.peerDetails.isAdmin) {
       fun({ status: false, room: "your not admin" });
@@ -245,6 +245,12 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
 
   socket.on("CreateStream", async (roomProps, fun) => {
     let roomName = roomProps.title;
+    socket.data.name = roomProps.userName
+      ? roomProps.userName
+      : Array(5)
+          .fill("")
+          .map(() => String.fromCharCode(97 + Math.floor(Math.random() * 26)))
+          .join("");
 
     var valid = ajv.validate(schema, { name: roomName });
 
@@ -266,15 +272,23 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
       }
     }
 
-    if (!TheRoomHelper.IsRoomExist(roomName, socket)) {
-      return createRoomForFristTime(roomProps, fun);
+     if (!TheRoomHelper.IsRoomExist(roomName, socket)) {
+      console.log('createRoomForFristTime');
+      await createRoomForFristTime(roomProps, fun);
+      return 
     }
+
+    // console.log('this is room exist '+ TheRoomHelper.IsRoomExist(roomName, socket));
+    // console.log('roomProps.IsViewer  '+ roomProps.IsViewer );
+    // console.log('is room full '+ TheRoomHelper.IsRoomFull(roomName));
+
 
     if (
       TheRoomHelper.IsRoomExist(roomName, socket) &&
       !roomProps.IsViewer &&
       !TheRoomHelper.IsRoomFull(roomName)
     ) {
+      console.log('YES IAMM CALLLED')
       joinExistRoom(roomName, fun);
       return;
     }
@@ -316,16 +330,18 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
   });
 
   //the event take a  message and broadcast it to the room
-  socket.on("Message", (room, Message) => {
-
+  socket.on("Message", (room, Message ) => {
+ console.log(Message , room ,socket.data.name);
     socket
-      .to(TheRoomHelper.GenerateRoomeTrafic(JSON.parse(room).title))
+      .to(TheRoomHelper.GenerateRoomeTrafic(room))
       .emit("Message", {
         Message,
+        name: socket.data.name
       });
 
-    socket.to(JSON.parse(room).title).emit("Message", {
+    socket.to(room).emit("Message", {
       Message,
+      name: socket.data.name
     });
   });
 };

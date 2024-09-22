@@ -61,9 +61,24 @@ class RoomHelper {
 
   //This function will return the current live rooms names
   GetAllUsersInRoom(room) {
-    const fetchSockets = this.socket.in(room).fetchSockets();
-
-    return fetchSockets;
+     const roomClients = this.socket.adapter.rooms.get(room);
+    if (!roomClients) {
+      return [];
+    }
+    
+    // const users = [];
+    // console.log(roomClients)
+    // for (const clientId of roomClients) {
+    //   const clientSocket = this.socket.sockets.get(clientId);
+    //   if (clientSocket) {
+    //     users.push({
+    //       id: clientId,
+    //       username: clientSocket.data.username // Assuming you store username in socket.data
+    //     });
+    //   }
+    // }
+    
+    return roomClients;
   }
 
   //Get the room admin id
@@ -78,14 +93,16 @@ class RoomHelper {
 
   //Check if the room exist
   IsRoomExist(room) {
-    const rooms = this.socket.adapter.rooms;
-    return rooms.has(room);
+     const rooms = this.socket.adapter.rooms;
+ 
+     return rooms.has(room);
   }
 
   //Check if room is full
   IsRoomFull(room) {
-    try {
-      if (this.socket.in(room).fetchSockets.length >= 5) {
+    const length = this.socket.in(room).fetchSockets.length;
+     try {
+      if (length >= 4) {
         return true;
       }
     } catch (e) {}

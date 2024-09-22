@@ -1,7 +1,6 @@
 const Logger = require("../lib/Logger");
 const mediaSoupHelper = require("../lib/mediaSoupHelper");
 const logger = new Logger();
-const fs = require("fs");
 
 module.exports = async ({
   socket,
@@ -21,14 +20,15 @@ module.exports = async ({
     informConsumers,
   } = await mediaSoupHelper({
     socket,
-    peers,
+    peers
   });
 
-  socket.on("leave", (name) => {
-    disConnectPeer(socket.id);
+  socket.on("leave",async (name) => {
+  await  disConnectPeer(socket.id , TheRoomHelper ,rooms,Traficrooms);
 
     let TheroomName = peers.get(socket.id)?.roomName;
     socket.leave(TheroomName);
+
   });
 
   
@@ -37,74 +37,9 @@ module.exports = async ({
   */
   
   socket.on("disconnect", async () => {
-    disConnectPeer(socket.id);
+    
+  await  disConnectPeer(socket.id , TheRoomHelper ,rooms,Traficrooms);
 
-    let TheroomName = peers.get(socket.id)?.roomName;
-
-    if (!TheroomName) return;
-
-    if (!TheRoomHelper.IsRoomExist(TheroomName, socket)) {
-      if (TheroomName !== "mainrrom" && !TheroomName.includes("@")) {
-        rooms?.get(TheroomName)?.close();
-
-        socket.to("mainrrom").emit("DelteRoom", { TheroomName });
-
-       await fs.unlink("src/uploads/" + TheroomName + ".png", (err) => {
-          if (err) {
-            logger.error(err);
-            return;
-          }
-        });
-      }
-
-      if (TheroomName !== "mainrrom" && TheroomName.includes("@")) {
-        rooms?.get(TheroomName)?.close();
-      }
-
-    }
-
-    if (peers.get(socket.id)?.peerDetails?.isAdmin) {
-      if (TheroomName !== null) {
-        if (!TheroomName) return;
-
-        let clients = socket.adapter.rooms.get(TheroomName);
-
-        if (!clients) return;
-        const [first] = clients;
-
-        if (clients.length !== 0) {
-          const newAdmin = peers.get(first);
-          const currentAdmin = peers.get(socket.id);
-          newAdmin.peerDetails.isAdmin = true;
-
-          newAdmin.peerDetails.isRoomLocked =
-            currentAdmin.peerDetails.isRoomLocked;
-
-          newAdmin.peerDetails.IsPublic = currentAdmin.peerDetails.IsPublic;
-
-          newAdmin.peerDetails.isStream = currentAdmin.peerDetails.isStream;
-
-          socket.to(first).emit("switchAdminSetting", {
-            isRoomLocked: currentAdmin.peerDetails.isRoomLocked,
-            isStream: currentAdmin.peerDetails.isStream,
-            IsPublic: currentAdmin.peerDetails.IsPublic,
-          });
-          socket.to(TheroomName).emit("switchAdmin", { admin: first });
-
-          socket
-            .to(TheRoomHelper.GenerateRoomeTrafic(TheroomName))
-            .emit("switchAdmin", { admin: first });
-        }
-      }
-    }
-
-    if (TheroomName) {
-      socket
-        .to(TheRoomHelper.GenerateRoomeTrafic(TheroomName))
-        .emit("FreeToJoin", { status: true });
-    }
-
-    peers.delete(socket.id);
   });
 
   /*
@@ -207,13 +142,15 @@ module.exports = async ({
 
   /* This event will return back to the user the current producers in the room */ 
 
-  socket.on("getProducers", ({ isViewr, roomName }, callback) => {
+  socket.on("getProducers", async({ isViewr, roomName }, callback) => {
     let producerList = [];
-
+    const usersInSocket =  await TheRoomHelper.GetAllUsersInRoom(roomName);
+    console.log(usersInSocket)
     for (const [id, peer] of peers) {
       if (peer.roomName === roomName && id !== socket.id) {
+       // const name = usersInSocket.usersInSocket.find(user => user.id === socket.id);
         for (const [producerId, producer] of peer.producers) {
-          producerList = [...producerList, [producerId, id]];
+          producerList = [...producerList, [producerId, id,peer.socket?.data?.name]];
         }
       }
     }
@@ -247,7 +184,9 @@ module.exports = async ({
       (error) => {
         logger.error(error);
       }
-    );
+    ).catch((error) => {
+      logger.error("ERROR CREATING WEBRTC TRANSPORT",error);
+    });
   });
 
   /* This event check if the room is available to join */
@@ -297,20 +236,23 @@ module.exports = async ({
           producerId: producer.id,
           router: router2,
         });
+
+
+        informViewrs(TraficRoom, producer.id, socket.id,socket.data.name);
+
       }
+      console.log(roomName, socket.id, socket.data.name);
+      informConsumers(roomName, socket.id, socket.data.name, producer.id);
 
-      informConsumers(roomName, socket.id, producer.id);
-
-      informViewrs(TraficRoom, producer.id, socket.id);
 
       producer.on("transportclose", () => {
         producer.close();
       });
       let peersInRoom = await TheRoomHelper.GetAllUsersInRoom(roomName);
-
+console.log(peersInRoom.size)
       callback({
         id: producer.id,
-        producersExist: peersInRoom.length >= 1 ? true : false,
+        producersExist: peersInRoom.size >= 1 ? true : false,
       });
     }
   );

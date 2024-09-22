@@ -2,19 +2,20 @@ require("dotenv").config();
 
 const Logger = require("./Logger");
 const logger = new Logger();
+const fs = require("fs");
 
-const mediaSoupHelper = ({ socket, peers }) => {
+const mediaSoupHelper = ({ socket, peers  }) => {
   /*
   This function called to tell all users in the room
   that there is a new user just joined the room
   and it take his socket id and producer id as is
   and the room name 
   */
-  informConsumers = (roomName, socketId, id) => {
-    logger.info(`user just joined room, id ${id} ${roomName}, ${socketId}`);
+  informConsumers = (roomName, socketId, name, id) => {
+    logger.info(`user just joined room, id ${id} ,${name} ${roomName}, ${socketId} `);
     socket
       .to(roomName)
-      .emit("new-producer", { producerId: id, socketId: socketId });
+      .emit("new-producer", { producerId: id, socketId: socketId, name: name });
   };
 
   /*
@@ -22,10 +23,10 @@ const mediaSoupHelper = ({ socket, peers }) => {
   viewer room that there a new user joined the 
   live room 
   */
-  informViewrs = (roomName, id, socketId) => {
+  informViewrs = (roomName, id, socketId ,name) => {
     socket
       .to(roomName)
-      .emit("new-producer", { producerId: id, socketId: socketId });
+      .emit("new-producer", { producerId: id, socketId: socketId , name: name });
 
     logger.info(`user joined, id ${id} ${roomName}, ${socketId}`);
   };
@@ -42,7 +43,8 @@ const mediaSoupHelper = ({ socket, peers }) => {
     peers.get(socket.id).consumers.set(consumer.id, consumer);
   };
 
-  disConnectPeer = (socketId) => {
+  disConnectPeer = async (socketId , TheRoomHelper ,rooms,Traficrooms) => {
+    console.log('DISCONNECT THE PEER')
     peer = peers.get(socketId);
 
     if (!peer) return;
@@ -64,6 +66,81 @@ const mediaSoupHelper = ({ socket, peers }) => {
 
       transport.close();
     }
+  
+
+    let TheroomName = peers.get(socketId)?.roomName;
+
+    if (!TheroomName) return;
+
+    if (!TheRoomHelper.IsRoomExist(TheroomName, socket)) {
+      if (TheroomName !== "mainrrom" && !TheroomName.includes("@")) {
+
+        console.log('THE PROSSESS OF CLOSING THE ROOM')
+
+        rooms?.get(TheroomName)?.close();
+
+        rooms.delete(TheroomName);
+        socket.to("mainrrom").emit("DelteRoom", { TheroomName });
+
+       await fs.unlink("src/uploads/" + TheroomName + ".png", (err) => {
+          if (err) {
+            logger.error(err);
+            return;
+          }
+        });
+      }
+
+      if (TheroomName !== "mainrrom" && TheroomName.includes("@")) {
+        Traficrooms?.get(TheroomName)?.close();
+        Traficrooms?.delete(TheroomName);
+      }
+
+    }
+
+    if (peers.get(socketId)?.peerDetails?.isAdmin) {
+      if (TheroomName !== null) {
+        if (!TheroomName) return;
+
+        let clients = socket.adapter.rooms.get(TheroomName);
+
+        if (!clients) return;
+        const [first] = clients;
+
+        if (clients.length !== 0) {
+          const newAdmin = peers.get(first);
+          const currentAdmin = peers.get(socketId);
+          newAdmin.peerDetails.isAdmin = true;
+
+          newAdmin.peerDetails.isRoomLocked =
+            currentAdmin.peerDetails.isRoomLocked;
+
+          newAdmin.peerDetails.IsPublic = currentAdmin.peerDetails.IsPublic;
+
+          newAdmin.peerDetails.isStream = currentAdmin.peerDetails.isStream;
+
+          socket.to(first).emit("switchAdminSetting", {
+            isRoomLocked: currentAdmin.peerDetails.isRoomLocked,
+            isStream: currentAdmin.peerDetails.isStream,
+            IsPublic: currentAdmin.peerDetails.IsPublic,
+          });
+          socket.to(TheroomName).emit("switchAdmin", { admin: first });
+
+          socket
+            .to(TheRoomHelper.GenerateRoomeTrafic(TheroomName))
+            .emit("switchAdmin", { admin: first });
+        }
+      }
+    }
+
+    if (TheroomName) {
+      socket
+        .to(TheRoomHelper.GenerateRoomeTrafic(TheroomName))
+        .emit("FreeToJoin", { status: true });
+    }
+
+    peers.delete(socketId);
+  
+  
   };
 
   //This function the client call to create webrtc transport

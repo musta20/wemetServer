@@ -61,7 +61,7 @@ async function main() {
 async function startSocketServer() {
   const socketSwerver = new Server(httpsServer, {
     cors: {
-      origin: "http://localhost:3000",
+      origin: "http://localhost:5173",
       methods: ["GET", "POST"],
       credentials: true,
     },
@@ -70,7 +70,7 @@ async function startSocketServer() {
   logger.info("\x1b[32m%s\x1b[0m", `START SOCKET SERVER `);
 
   socketSwerver.on("connection", async (socket) => {
-    TheRoomHelper = new RoomHelper(socket);
+     TheRoomHelper = new RoomHelper(socket);
 
 
     await roomEventEventHandler({
@@ -161,8 +161,10 @@ async function createWorkers() {
     });
 
     logger.info(`WORKER START PID:${worker.pid}`);
+ 
     if (process.env.MEDIASOUP_USE_WEBRTC_SERVER !== "false") {
-      // Each mediasoup Worker will run its own WebRtcServer, so those cannot
+      console.log('WEBRTC SERVER IS NOT FALSE');
+       // Each mediasoup Worker will run its own WebRtcServer, so those cannot
       // share the same listening ports. Hence we increase the value in config.js
       // for each Worker.
       const webRtcServerOptions = utils.clone(
@@ -182,33 +184,33 @@ async function createWorkers() {
     mediasoupWorkers.push(worker);
 
     // Log worker resource usage every X seconds.
-    setInterval(async () => {
-      const usage = await worker.getResourceUsage();
-      const usageTraffic = await trafficRoomWorker.getResourceUsage();
-      const dumpTraffic = await trafficRoomWorker.dump();
+    // setInterval(async () => {
+    //   const usage = await worker.getResourceUsage();
+    //   const usageTraffic = await trafficRoomWorker.getResourceUsage();
+    //   const dumpTraffic = await trafficRoomWorker.dump();
 
-      const dump = await worker.dump();
+    //   const dump = await worker.dump();
 
-      logger.info(
-        "mediasoup Worker resource usage [pid:%d]: %o",
-        worker.pid,
-        usage
-      );
+    //   logger.info(
+    //     "mediasoup Worker resource usage [pid:%d]: %o",
+    //     worker.pid,
+    //     usage
+    //   );
 
-      logger.info("mediasoup Worker dump [pid:%d]: %o", worker.pid, dump);
+    //   logger.info("mediasoup Worker dump [pid:%d]: %o", worker.pid, dump);
 
-      logger.info(
-        "mediasoup Worker resource usage [pid:%d]: %o",
-        trafficRoomWorker.pid,
-        usageTraffic
-      );
+    //   logger.info(
+    //     "mediasoup Worker resource usage [pid:%d]: %o",
+    //     trafficRoomWorker.pid,
+    //     usageTraffic
+    //   );
 
-      logger.info(
-        "mediasoup Worker dump [pid:%d]: %o",
-        trafficRoomWorker.pid,
-        dumpTraffic
-      );
-    }, 12000);
+    //   logger.info(
+    //     "mediasoup Worker dump [pid:%d]: %o",
+    //     trafficRoomWorker.pid,
+    //     dumpTraffic
+    //   );
+    // }, 12000);
   }
 
   trafficRoomWorker = await mediasoup.createWorker({
@@ -251,32 +253,36 @@ async function createWorkers() {
     setTimeout(() => process.exit(1), 2000);
   });
 
-  setInterval(async () => {
-    const usageTraffic = await trafficRoomWorker.getResourceUsage();
-    const dumpTraffic = await trafficRoomWorker.dump();
+  // setInterval(async () => {
+  //   const usageTraffic = await trafficRoomWorker.getResourceUsage();
+  //   const dumpTraffic = await trafficRoomWorker.dump();
 
-    logger.info(
-      "mediasoup Worker resource usage [pid:%d]: %o",
-      trafficRoomWorker.pid,
-      usageTraffic
-    );
+  //   logger.info(
+  //     "mediasoup Worker resource usage [pid:%d]: %o",
+  //     trafficRoomWorker.pid,
+  //     usageTraffic
+  //   );
 
-    logger.info(
-      "mediasoup Worker dump [pid:%d]: %o",
-      trafficRoomWorker.pid,
-      dumpTraffic
-    );
-  }, 12000);
+  //   logger.info(
+  //     "mediasoup Worker dump [pid:%d]: %o",
+  //     trafficRoomWorker.pid,
+  //     dumpTraffic
+  //   );
+  // }, 12000);
 }
 
 async function getOrCreateRoom(roomName, type) {
+ 
   let router;
   if (type == "traffic") {
     if (Traficrooms.has(roomName)) {
       router = Traficrooms.get(roomName);
     } else {
+      try {
       router = await trafficRoomWorker.createRouter({ mediaCodecs });
-
+      } catch (e) {
+        Logger.error("ERROR CREATEING TRAFFIC ROUTER",e);
+      }
       Traficrooms.set(roomName, router);
     }
 
@@ -286,9 +292,17 @@ async function getOrCreateRoom(roomName, type) {
   if (rooms.has(roomName)) {
     router = rooms.get(roomName);
   } else {
+
     const worker = getMediasoupWorker();
+
+    try {
     router = await worker.createRouter({ mediaCodecs });
+    } catch (e) {
+      Logger.error("ERROR CREATEING MAIN ROOM ROUTER",e);
+    }
+
     rooms.set(roomName, router);
+
   }
 
   return router;
