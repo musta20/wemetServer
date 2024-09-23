@@ -273,7 +273,7 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
     }
 
      if (!TheRoomHelper.IsRoomExist(roomName, socket)) {
-      console.log('createRoomForFristTime');
+     // console.log('createRoomForFristTime');
       await createRoomForFristTime(roomProps, fun);
       return 
     }
@@ -288,7 +288,7 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
       !roomProps.IsViewer &&
       !TheRoomHelper.IsRoomFull(roomName)
     ) {
-      console.log('YES IAMM CALLLED')
+     // console.log('YES IAMM CALLLED')
       joinExistRoom(roomName, fun);
       return;
     }
@@ -331,7 +331,7 @@ module.exports = ({ socket, peers, TheRoomHelper, getOrCreateRoom, rooms }) => {
 
   //the event take a  message and broadcast it to the room
   socket.on("Message", (room, Message ) => {
- console.log(Message , room ,socket.data.name);
+ //console.log(Message , room ,socket.data.name);
     socket
       .to(TheRoomHelper.GenerateRoomeTrafic(room))
       .emit("Message", {

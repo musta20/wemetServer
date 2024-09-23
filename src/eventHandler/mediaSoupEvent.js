@@ -24,6 +24,9 @@ module.exports = async ({
   });
 
   socket.on("leave",async (name) => {
+
+   // console.log('LEAVE EVENT TRIGGERED');
+
   await  disConnectPeer(socket.id , TheRoomHelper ,rooms,Traficrooms);
 
     let TheroomName = peers.get(socket.id)?.roomName;
@@ -37,6 +40,8 @@ module.exports = async ({
   */
   
   socket.on("disconnect", async () => {
+   // console.log('DISCONNECT EVENT TRIGGERED');
+
     
   await  disConnectPeer(socket.id , TheRoomHelper ,rooms,Traficrooms);
 
@@ -145,7 +150,7 @@ module.exports = async ({
   socket.on("getProducers", async({ isViewr, roomName }, callback) => {
     let producerList = [];
     const usersInSocket =  await TheRoomHelper.GetAllUsersInRoom(roomName);
-    console.log(usersInSocket)
+   //console.log (usersInSocket)
     for (const [id, peer] of peers) {
       if (peer.roomName === roomName && id !== socket.id) {
        // const name = usersInSocket.usersInSocket.find(user => user.id === socket.id);
@@ -241,7 +246,7 @@ module.exports = async ({
         informViewrs(TraficRoom, producer.id, socket.id,socket.data.name);
 
       }
-      console.log(roomName, socket.id, socket.data.name);
+     // console.log(roomName, socket.id, socket.data.name);
       informConsumers(roomName, socket.id, socket.data.name, producer.id);
 
 

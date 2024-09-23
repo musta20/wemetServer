@@ -44,7 +44,6 @@ const mediaSoupHelper = ({ socket, peers  }) => {
   };
 
   disConnectPeer = async (socketId , TheRoomHelper ,rooms,Traficrooms) => {
-    console.log('DISCONNECT THE PEER')
     peer = peers.get(socketId);
 
     if (!peer) return;
@@ -75,7 +74,7 @@ const mediaSoupHelper = ({ socket, peers  }) => {
     if (!TheRoomHelper.IsRoomExist(TheroomName, socket)) {
       if (TheroomName !== "mainrrom" && !TheroomName.includes("@")) {
 
-        console.log('THE PROSSESS OF CLOSING THE ROOM')
+       //console.log('THE PROSSESS OF CLOSING THE ROOM')
 
         rooms?.get(TheroomName)?.close();
 
