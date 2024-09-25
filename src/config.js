@@ -17,7 +17,7 @@ module.exports =
 	// Signaling settings (protoo WebSocket server and HTTP API server).
 	https  :
 	{
-		listenIp   : 'localhost',
+		listenIp   : process.env.MEDIASOUP_ANNOUNCED_IP,
 		// NOTE: Don't change listenPort (client app assumes 4443).
 		listenPort : process.env.WEMET_SERVER_PORT || 6800,
 		// NOTE: Set your own valid certificate files.
