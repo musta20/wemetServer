@@ -130,7 +130,6 @@ async function startHttpServer() {
   await new Promise((resolve) => {
     httpsServer.listen(
       Number(config.https.listenPort),
-      config.https.listenIp,
       resolve
     );
   });
